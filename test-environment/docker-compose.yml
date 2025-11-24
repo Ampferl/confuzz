@@ -1,0 +1,24 @@
+services:
+  consumer:
+    build: ./consumer
+    container_name: confuzz-testbed-consumer
+    ports:
+      - "5050:5000"
+    networks:
+      - testbed_network
+    environment:
+      - PRODUCER_URL=http://producer:5051
+    depends_on:
+      - producer
+
+  producer:
+    build: ./producer
+    container_name: confuzz-testbed-producer
+    ports:
+      - "5051:5000"
+    networks:
+      - testbed_network
+
+networks:
+  testbed_network:
+    driver: bridge
