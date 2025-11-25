@@ -7,7 +7,7 @@ services:
     networks:
       - testbed_network
     environment:
-      - PRODUCER_URL=http://producer:5051
+      - PRODUCER_URL=http://producer:5000
     depends_on:
       - producer
 
