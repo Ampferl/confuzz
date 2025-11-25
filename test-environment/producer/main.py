@@ -10,12 +10,12 @@ async def healthcheck():
 # Scenario 0 - API1:2023 Broken Object Level Authorization
 @app.get("/upstream/config/log-settings")
 async def scenario_0():
-    return {"scenario": 0}
+    return {"log_file": "app.log"}
 
 
 # Scenario 1 - API3:2023 Broken Object Property Level Authorization
 @app.get("/upstream/users/{id}/details")
-async def scenario_1(id):
+async def scenario_1(id: int):
     return {"scenario": 1, "id": id}
 
 

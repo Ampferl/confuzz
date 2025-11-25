@@ -1,23 +1,24 @@
-from fastapi import FastAPI
+from utils import fetch_data_from_producer, init_log_file
+
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 import logging
-import httpx
 import os
+import sqlite3
+import traceback
+import time
 
 app = FastAPI(title="Consumer Service")
 logger = logging.getLogger("consumer")
 
-PRODUCER_URL = os.getenv("PRODUCER_URL")
-PROXY_URL = os.getenv("HTTP_PROXY")
+# In-memory DB for Scenario 1
+USERS_DB = {}
 
 
-async def fetch_data_from_producer(url):
-    async with httpx.AsyncClient(proxies=os.getenv("HTTP_PROXY"), timeout=None) as client:
-        try:
-            resp = await client.get(f"{PRODUCER_URL}{url}")
-            return resp
-        except Exception as e:
-            logger.error(f"Error fetching data from producer: {e}")
-            return  None
+
+@app.on_event("startup")
+async def startup_event():
+    init_log_file()
 
 
 @app.get("/health")
@@ -30,13 +31,25 @@ async def healthcheck():
 async def scenario_0():
     data = await fetch_data_from_producer('/upstream/config/log-settings')
     if not data:
-        return {"error": "producer not reachable"}
-    return {"producer_data": data.json()}
+        return {"error": "Invalid upstream response"}
+
+    try:
+        data = data.json()
+    except:
+        return {"error": "Invalid upstream response"}
+
+    filename = data.get("log_file")
+
+    try:
+        with open(filename, "r") as f:
+            return {"log_content": f.read()}
+    except:
+        return {"error": f"Error reading log file."}
 
 
 # Scenario 1 - API3:2023 Broken Object Property Level Authorization
 @app.post("/api/v1/users/sync/{id}")
-async def scenario_1(id):
+async def scenario_1(id: int):
     data = await fetch_data_from_producer(f'/upstream/users/{id}/details')
     if not data:
         return {"error": "producer not reachable"}

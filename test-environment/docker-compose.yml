@@ -4,20 +4,26 @@ services:
     container_name: confuzz-testbed-consumer
     ports:
       - "5050:5000"
+    volumes:
+      - ./consumer:/app
     networks:
       - testbed_network
     environment:
       - PRODUCER_URL=http://producer:5000
     depends_on:
       - producer
+    command: watchmedo auto-restart --directory=/app --pattern=*.py --recursive -- uvicorn main:app --host 0.0.0.0 --port 5000
 
   producer:
     build: ./producer
     container_name: confuzz-testbed-producer
     ports:
       - "5051:5000"
+    volumes:
+      - ./producer:/app
     networks:
       - testbed_network
+    command: watchmedo auto-restart --directory=/app --pattern=*.py --recursive -- uvicorn main:app --host 0.0.0.0 --port 5000
 
 networks:
   testbed_network:
