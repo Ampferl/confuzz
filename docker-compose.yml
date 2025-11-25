@@ -1,26 +1,30 @@
 services:
   consumer:
-    build: ./consumer
+    build: ./test-environment/consumer
     container_name: confuzz-testbed-consumer
     ports:
       - "5050:5000"
     volumes:
-      - ./consumer:/app
+      - ./test-environment/consumer:/app
     networks:
       - testbed_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
-      - PRODUCER_URL=http://producer:5000
+      - PRODUCER_URL=http://localhost:5051
+      - HTTP_PROXY=http://host.docker.internal:8080
+      - HTTPS_PROXY=http://host.docker.internal:8080
     depends_on:
       - producer
     command: watchmedo auto-restart --directory=/app --pattern=*.py --recursive -- uvicorn main:app --host 0.0.0.0 --port 5000
 
   producer:
-    build: ./producer
+    build: ./test-environment/producer
     container_name: confuzz-testbed-producer
     ports:
       - "5051:5000"
     volumes:
-      - ./producer:/app
+      - ./test-environment/producer:/app
     networks:
       - testbed_network
     command: watchmedo auto-restart --directory=/app --pattern=*.py --recursive -- uvicorn main:app --host 0.0.0.0 --port 5000
