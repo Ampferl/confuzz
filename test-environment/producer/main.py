@@ -16,7 +16,7 @@ async def scenario_0():
 # Scenario 1 - API3:2023 Broken Object Property Level Authorization
 @app.get("/upstream/users/{id}/details")
 async def scenario_1(id: int):
-    return {"scenario": 1, "id": id}
+    return {"username": f"user_{id}", "email": f"user{id}@example.com"}
 
 
 # Scenario 2 - API4:2023 Unrestricted Resource Consumption

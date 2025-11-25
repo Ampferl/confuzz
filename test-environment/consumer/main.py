@@ -15,6 +15,11 @@ logger = logging.getLogger("consumer")
 USERS_DB = {}
 
 
+class User(BaseModel):
+    username: str
+    email: str
+    role: str = "user"
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -30,8 +35,7 @@ async def healthcheck():
 @app.get("/api/v1/admin/view-logs")
 async def scenario_0():
     data = await fetch_data_from_producer('/upstream/config/log-settings')
-    if not data:
-        return {"error": "Invalid upstream response"}
+    if not data: return {"error": "Invalid upstream response"}
 
     try:
         data = data.json()
@@ -51,17 +55,22 @@ async def scenario_0():
 @app.post("/api/v1/users/sync/{id}")
 async def scenario_1(id: int):
     data = await fetch_data_from_producer(f'/upstream/users/{id}/details')
-    if not data:
-        return {"error": "producer not reachable"}
-    return {"producer_data": data.json()}
+    if not data: return {"error": "Invalid upstream response"}
+
+    data = data.json()
+    data = User(**data)
+
+    USERS_DB[id] = data
+
+    return {"status": "synced", "user_state": USERS_DB[id]}
 
 
 # Scenario 2 - API4:2023 Unrestricted Resource Consumption
 @app.post("/api/v1/auth/init")
 async def scenario_2():
     data = await fetch_data_from_producer('/upstream/security/policy')
-    if not data:
-        return {"error": "producer not reachable"}
+    if not data: return {"error": "Invalid upstream response"}
+
     return {"producer_data": data.json()}
 
 
@@ -69,8 +78,8 @@ async def scenario_2():
 @app.get("/api/v1/profile/avatar")
 async def scenario_3():
     data = await fetch_data_from_producer('/upstream/user/profile')
-    if not data:
-        return {"error": "producer not reachable"}
+    if not data: return {"error": "Invalid upstream response"}
+
     return {"producer_data": data.json()}
 
 
@@ -78,8 +87,8 @@ async def scenario_3():
 @app.get("/api/v1/shop/inventory")
 async def scenario_4():
     data = await fetch_data_from_producer('/upstream/inventory/list')
-    if not data:
-        return {"error": "producer not reachable"}
+    if not data: return {"error": "Invalid upstream response"}
+
     return {"producer_data": data.json()}
 
 
@@ -87,6 +96,6 @@ async def scenario_4():
 @app.get("/api/v1/orders/recommendations")
 async def scenario_5():
     data = await fetch_data_from_producer('/upstream/analytics/preferences')
-    if not data:
-        return {"error": "producer not reachable"}
+    if not data: return {"error": "Invalid upstream response"}
+
     return {"producer_data": data.json()}
