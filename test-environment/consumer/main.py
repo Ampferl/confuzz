@@ -1,4 +1,4 @@
-from utils import fetch_data_from_producer, init_log_file
+from utils import fetch_data_from_producer, init_log_file, init_db
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -25,6 +25,7 @@ class User(BaseModel):
 @app.on_event("startup")
 async def startup_event():
     init_log_file()
+    init_db()
 
 
 @app.get("/health")
@@ -124,4 +125,25 @@ async def scenario_5():
     data = await fetch_data_from_producer('/upstream/analytics/preferences')
     if not data: return {"error": "Invalid upstream response"}
 
-    return {"producer_data": data.json()}
+    data = data.json()
+    try:
+        category = data.get('category')
+
+    except:
+        return {"error": "Invalid upstream response"}
+
+    query = f"SELECT * FROM orders WHERE category = '{category}'"
+
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(query)
+        results = cursor.fetchall()
+        if len(results) == 0:
+            return {"error": "No items found in the database"}
+        return {"recommended_items": results}
+    except Exception as e:
+        return {"error": "Failed to fetch recommended items", "details": str(e)}
+    finally:
+        conn.close()

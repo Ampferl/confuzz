@@ -8,7 +8,6 @@ PROXY_URL = os.getenv("HTTP_PROXY")
 
 logger = logging.getLogger("consumer")
 
-
 async def fetch_data_from_producer(url):
     mounts = {}
     if PROXY_URL:
@@ -19,7 +18,6 @@ async def fetch_data_from_producer(url):
             resp = await client.get(f"{PRODUCER_URL}{url}")
             return resp
         except Exception as e:
-            logger.error(f"PROXY_URL: {PROXY_URL}")
             logger.error(f"Error fetching data from producer: {e}")
             return  None
 
@@ -27,3 +25,15 @@ async def fetch_data_from_producer(url):
 def init_log_file():
     with open("app.log", "w") as f:
         f.write("[+] Log file initialized")
+
+
+def init_db():
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    c.execute('DROP TABLE IF EXISTS orders')
+    c.execute('CREATE TABLE orders (id INTEGER PRIMARY KEY, item TEXT, category TEXT)')
+    c.execute("INSERT INTO orders (item, category) VALUES ('Laptop', 'electronics')")
+    c.execute("INSERT INTO orders (item, category) VALUES ('Cable', 'accessories')")
+    c.execute("INSERT INTO orders (item, category) VALUES ('Phone', 'electronics')")
+    conn.commit()
+    conn.close()

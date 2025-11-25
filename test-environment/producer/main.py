@@ -41,4 +41,4 @@ async def scenario_4():
 # Scenario 5 - API10:2023 Unsafe Consumption of APIs
 @app.get("/upstream/analytics/preferences")
 async def scenario_5():
-    return {"scenario": 5}
+    return {"category": "tools"}
