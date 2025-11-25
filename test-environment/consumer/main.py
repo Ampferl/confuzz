@@ -111,7 +111,11 @@ async def scenario_4():
     data = await fetch_data_from_producer('/upstream/inventory/list')
     if not data: return {"error": "Invalid upstream response"}
 
-    return {"producer_data": data.json()}
+    try:
+        inventory = data.json()
+        return {"count": len(inventory['devices'])}
+    except Exception:
+        return {"error": "Internal Error", "trace": traceback.format_exc()}
 
 
 # Scenario 5 - API10:2023 Unsafe Consumption of APIs

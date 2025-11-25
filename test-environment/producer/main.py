@@ -28,13 +28,14 @@ async def scenario_2():
 # Scenario 3 - API7:2023 Server-Side Request Forgery
 @app.get("/upstream/user/profile")
 async def scenario_3():
+    # TODO Change this to a URL from the producer?
     return {"avatar_url": "http://www.http2demo.io/img/refresh-icon.png"}
 
 
 # Scenario 4 - API8:2023 Security Misconfiguration
 @app.get("/upstream/inventory/list")
 async def scenario_4():
-    return {"scenario": 4}
+    return {"devices": ["phone", "laptop", "server"]}
 
 
 # Scenario 5 - API10:2023 Unsafe Consumption of APIs
