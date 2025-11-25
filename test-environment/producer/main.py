@@ -28,7 +28,7 @@ async def scenario_2():
 # Scenario 3 - API7:2023 Server-Side Request Forgery
 @app.get("/upstream/user/profile")
 async def scenario_3():
-    return {"scenario": 3}
+    return {"avatar_url": "http://www.http2demo.io/img/refresh-icon.png"}
 
 
 # Scenario 4 - API8:2023 Security Misconfiguration

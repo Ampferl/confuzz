@@ -2,6 +2,7 @@ from utils import fetch_data_from_producer, init_log_file
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+import httpx
 import logging
 import os
 import sqlite3
@@ -91,7 +92,17 @@ async def scenario_3():
     data = await fetch_data_from_producer('/upstream/user/profile')
     if not data: return {"error": "Invalid upstream response"}
 
-    return {"producer_data": data.json()}
+    data = data.json()
+
+    target_url = data.get("avatar_url")
+
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            img_resp = await client.get(target_url)
+            return {"avatar_size": len(img_resp.content), "status": img_resp.status_code}
+    except Exception as e:
+        return {"error": f"Failed to fetch avatar: {str(e)}"}
+
 
 
 # Scenario 4 - API8:2023 Security Misconfiguration
