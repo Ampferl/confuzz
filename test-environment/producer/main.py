@@ -22,7 +22,7 @@ async def scenario_1(id: int):
 # Scenario 2 - API4:2023 Unrestricted Resource Consumption
 @app.get("/upstream/security/policy")
 async def scenario_2():
-    return {"scenario": 2}
+    return {"hashing_algorithm": "custom_hash", "hashing_rounds": 10}
 
 
 # Scenario 3 - API7:2023 Server-Side Request Forgery

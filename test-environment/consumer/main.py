@@ -71,7 +71,18 @@ async def scenario_2():
     data = await fetch_data_from_producer('/upstream/security/policy')
     if not data: return {"error": "Invalid upstream response"}
 
-    return {"producer_data": data.json()}
+    data = data.json()
+    work_factor = data.get('hashing_rounds', 1)
+
+    # This should simulate the calculation of the hash
+    try:
+        start = time.time()
+        time.sleep(float(work_factor) / 10.0)
+        duration = time.time() - start
+        return {"status": "initialized", "duration": duration}
+    except Exception as e:
+        return {"error": str(e)}
+
 
 
 # Scenario 3 - API7:2023 Server-Side Request Forgery
