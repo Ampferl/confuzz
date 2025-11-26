@@ -1,12 +1,36 @@
+from datetime import datetime
+from urllib.parse import urlparse
 import logging
 import sqlite3
 import httpx
+import json
 import os
 
 PRODUCER_URL = os.getenv("PRODUCER_URL", "http://producer:5000/")
 PROXY_URL = os.getenv("HTTP_PROXY")
 
 logger = logging.getLogger("consumer")
+
+eval_logger = logging.getLogger("evaluation")
+eval_logger.setLevel(logging.INFO)
+
+if not eval_logger.handlers:
+    handler = logging.FileHandler("consumer_eval.log")
+    formatter = logging.Formatter('%(asctime)s - %(message)s')
+    handler.setFormatter(formatter)
+    eval_logger.addHandler(handler)
+
+def log_eval(scenario: int, payload: str, details: str, status_code: int = 200, exploited: bool = False):
+    entry = {
+        "scenario": scenario,
+        "timestamp": datetime.now().isoformat(),
+        "payload_received": payload,
+        "details": details,
+        "status_code": status_code,
+        "exploited": exploited
+    }
+    eval_logger.info(json.dumps(entry))
+
 
 async def fetch_data_from_producer(url):
     mounts = {}
@@ -37,3 +61,11 @@ def init_db():
     c.execute("INSERT INTO orders (item, category) VALUES ('Phone', 'electronics')")
     conn.commit()
     conn.close()
+
+
+def is_url(url):
+  try:
+    result = urlparse(url)
+    return all([result.scheme, result.netloc])
+  except ValueError:
+    return False
