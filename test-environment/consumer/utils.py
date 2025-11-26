@@ -20,14 +20,15 @@ if not eval_logger.handlers:
     handler.setFormatter(formatter)
     eval_logger.addHandler(handler)
 
-def log_eval(scenario: int, payload: str, details: str, status_code: int = 200, exploited: bool = False):
+def log_eval(scenario: int, payload: str, details: str, status_code: int = 200, exploited: bool = False, exposed: bool = False):
     entry = {
         "scenario": scenario,
         "timestamp": datetime.now().isoformat(),
         "payload_received": payload,
         "details": details,
         "status_code": status_code,
-        "exploited": exploited
+        "exploited": exploited,
+        "exposed": exposed
     }
     eval_logger.info(json.dumps(entry))
 

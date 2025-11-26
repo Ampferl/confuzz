@@ -32,8 +32,9 @@ async def startup_event():
 async def healthcheck():
     return {"status": "ok", "service": "consumer"}
 
-
-# Scenario 0 - API1:2023 Broken Object Level Authorization
+############################################################
+# Scenario 0 - API1:2023 Broken Object Level Authorization #
+############################################################
 @app.get("/api/v1/admin/view-logs")
 async def scenario_0(response: Response):
     data = await fetch_data_from_producer('/upstream/config/log-settings')
@@ -59,15 +60,18 @@ async def scenario_0(response: Response):
     try:
         with open(filename, "r") as f:
             content = f.read()
-            log_eval(0, data.text, f"Successful read: {content}", response.status_code, exploited=(filename != 'app.log'))
+            response.status_code = status.HTTP_200_OK
+            log_eval(0, data.text, f"Successful read: {content}", response.status_code, exploited=(filename != 'app.log'), exposed=(filename != 'app.log'))
             return {"log_content": content}
     except:
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        log_eval(0, data.text, "Unsuccessfully changed filename", response.status_code, exploited=True)
+        log_eval(0, data.text, "Unsuccessfully changed filename", response.status_code, exploited=True, exposed=False)
         return {"error": f"Error reading log file."}
 
 
-# Scenario 1 - API3:2023 Broken Object Property Level Authorization
+#####################################################################
+# Scenario 1 - API3:2023 Broken Object Property Level Authorization #
+#####################################################################
 @app.post("/api/v1/users/sync/{id}")
 async def scenario_1(id: int, response: Response):
     data = await fetch_data_from_producer(f'/upstream/users/{id}/details')
@@ -86,15 +90,17 @@ async def scenario_1(id: int, response: Response):
     data_json = User(**data_json)
     USERS_DB[id] = data_json
 
-
+    response.status_code = status.HTTP_200_OK
     if USERS_DB[id].role != "user":
-        log_eval(1, data.text, f"User role changed to {USERS_DB[id].role}", response.status_code, exploited=True)
+        log_eval(1, data.text, f"User role changed to {USERS_DB[id].role}", response.status_code, exploited=True, exposed=True)
     else:
         log_eval(1, data.text, "User state synced", response.status_code)
     return {"status": "synced", "user_state": USERS_DB[id]}
 
 
-# Scenario 2 - API4:2023 Unrestricted Resource Consumption
+############################################################
+# Scenario 2 - API4:2023 Unrestricted Resource Consumption #
+############################################################
 @app.post("/api/v1/auth/init")
 async def scenario_2(response: Response):
     data = await fetch_data_from_producer('/upstream/security/policy')
@@ -118,12 +124,14 @@ async def scenario_2(response: Response):
         return {"error": "Invalid upstream response"}
 
     # This should simulate the calculation of the hash
+    # TODO Think about implementing a timeout
     try:
         start = time.time()
         time.sleep(float(work_factor) / 10.0)
         duration = time.time() - start
+        response.status_code = status.HTTP_200_OK
         if duration > 5.0:
-            log_eval(2, data.text, f"Unrestricted Resource consumption due to {duration}s long hashing (rounds: {work_factor})", response.status_code, exploited=True)
+            log_eval(2, data.text, f"Unrestricted Resource consumption due to {duration}s long hashing (rounds: {work_factor})", response.status_code, exploited=True, exposed=True)
         else:
             log_eval(2, data.text, f"Successful hashing in {duration}s", response.status_code)
         return {"status": "initialized", "duration": duration}
@@ -134,7 +142,9 @@ async def scenario_2(response: Response):
 
 
 
-# Scenario 3 - API7:2023 Server-Side Request Forgery
+######################################################
+# Scenario 3 - API7:2023 Server-Side Request Forgery #
+######################################################
 @app.get("/api/v1/profile/avatar")
 async def scenario_3(response: Response):
     data = await fetch_data_from_producer('/upstream/user/profile')
@@ -160,9 +170,10 @@ async def scenario_3(response: Response):
     try:
         async with httpx.AsyncClient(timeout=2.0) as client:
             img_resp = await client.get(target_url)
-
+            # TODO think about returning the data e.g. for file:// tests
+            response.status_code = status.HTTP_200_OK
             if target_url != "http://www.http2demo.io/img/refresh-icon.png": # TODO change the target_url
-                log_eval(3, data.text, f"Server side request forgery", response.status_code, exploited=True)
+                log_eval(3, data.text, f"Server side request forgery", response.status_code, exploited=True, exposed=True)
             else:
                 log_eval(3, data.text, f"Successfully fetched avatar", response.status_code)
 
@@ -172,7 +183,7 @@ async def scenario_3(response: Response):
         if target_url == "http://www.http2demo.io/img/refresh-icon.png": # TODO change the target_url
             log_eval(3, data.text, f"Original target url not accessible", response.status_code)
         elif is_url(target_url):
-            log_eval(3, data.text, f"Modified target url not accessible", response.status_code, exploited=True) # TODO Evaluate this a exploited? (FN)
+            log_eval(3, data.text, f"Modified target url not accessible", response.status_code, exploited=True, exposed=False) # TODO Evaluate this a exploited? (FN)
         else:
             log_eval(3, data.text, f"Failed to fetch avatar", response.status_code)
         return {"error": f"Failed to fetch avatar: {str(e)}"}
@@ -181,7 +192,9 @@ async def scenario_3(response: Response):
 
 
 
-# Scenario 4 - API8:2023 Security Misconfiguration
+####################################################
+# Scenario 4 - API8:2023 Security Misconfiguration #
+####################################################
 @app.get("/api/v1/shop/inventory")
 async def scenario_4(response: Response):
     data = await fetch_data_from_producer('/upstream/inventory/list')
@@ -193,6 +206,7 @@ async def scenario_4(response: Response):
     try:
         inventory = data.json()
         devices = inventory.get('devices')
+        response.status_code = status.HTTP_200_OK
         log_eval(4, data.text, f"Valid JSON response", response.status_code)
         return {"count": len(devices)}
     except Exception as e:
@@ -203,11 +217,13 @@ async def scenario_4(response: Response):
         }.get(type(e), "Unexpected error")
 
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        log_eval(4, data.text, msg, response.status_code, exploited=True)
+        log_eval(4, data.text, msg, response.status_code, exploited=True, exposed=True)
         return {"error": "Internal Error", "trace": traceback.format_exc()}
 
 
-# Scenario 5 - API10:2023 Unsafe Consumption of APIs
+######################################################
+# Scenario 5 - API10:2023 Unsafe Consumption of APIs #
+######################################################
 @app.get("/api/v1/orders/recommendations")
 async def scenario_5(response: Response):
     data = await fetch_data_from_producer('/upstream/analytics/preferences')
@@ -242,11 +258,12 @@ async def scenario_5(response: Response):
             response.status_code = status.HTTP_404_NOT_FOUND
             log_eval(5, data.text, f"No items found for category {category}", response.status_code)
             return {"error": "No items found in the database"}
-        log_eval(5, data.text, f"SQL injection triggered: {results}", response.status_code, exploited=True)
+        response.status_code = status.HTTP_200_OK
+        log_eval(5, data.text, f"SQL injection triggered: {results}", response.status_code, exploited=True, exposed=True)
         return {"recommended_items": results}
     except Exception as e:
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        log_eval(5, data.text, f"SQL injection triggered with invalid query: {e}", response.status_code, exploited=True)
+        log_eval(5, data.text, f"SQL injection triggered with invalid query: {e}", response.status_code, exploited=True, exposed=True)
         return {"error": "Failed to fetch recommended items", "details": str(e)}
     finally:
         conn.close()
