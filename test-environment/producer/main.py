@@ -42,3 +42,4 @@ async def scenario_4():
 @app.get("/upstream/analytics/preferences")
 async def scenario_5():
     return {"category": "tools"}
+
