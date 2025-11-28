@@ -1,0 +1,3 @@
+
+class BaselineFuzzer:
+    pass
