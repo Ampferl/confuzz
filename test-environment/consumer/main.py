@@ -111,7 +111,7 @@ async def scenario_2(response: Response):
 
     try:
         data_json = data.json()
-        work_factor = data_json.get('hashing_rounds', 1)
+        work_factor = int(data_json.get('hashing_rounds', 1))
     except Exception as e:
         msg = {
             JSONDecodeError: "Could not parse JSON response",
@@ -126,11 +126,14 @@ async def scenario_2(response: Response):
     # This should simulate the calculation of the hash
     # TODO Think about implementing a timeout
     try:
+        sleep_time = float(work_factor) / 10.0
+        if sleep_time > 10.0:
+            sleep_time = 10.0
         start = time.time()
-        time.sleep(float(work_factor) / 10.0)
+        time.sleep(sleep_time)
         duration = time.time() - start
         response.status_code = status.HTTP_200_OK
-        if duration > 5.0:
+        if work_factor > 100:
             log_eval(2, data.text, f"Unrestricted Resource consumption due to {duration}s long hashing (rounds: {work_factor})", response.status_code, exploited=True, exposed=True)
         else:
             log_eval(2, data.text, f"Successful hashing in {duration}s", response.status_code)

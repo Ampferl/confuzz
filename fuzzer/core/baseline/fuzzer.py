@@ -1,3 +1,39 @@
+import logging
+import random
+import json
+
+from core.baseline.mutator import Mutator
+
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger("baseline")
+
 
 class BaselineFuzzer:
-    pass
+    def __init__(self):
+        self.mutator = Mutator()
+
+    def fuzz(self, data_str: str) -> str:
+        try:
+            """
+            - 10% Bit Flipping (Error Handling)
+            - 90% Structure Mutation (Test Logic/Injections)
+            """
+            if random.random() < 0.1:
+                logger.debug("Strategy: Bit Flipping")
+                return self.mutator.bit_flip(data_str)
+
+            logger.debug("Strategy: Structure Mutation")
+            try:
+                data = json.loads(data_str)
+            except json.JSONDecodeError:
+                # If it fails, just fall back to bit flipping
+                logger.error("Failed parsing the data")
+                return self.mutator.bit_flip(data_str)
+
+            mutated_data = self.mutator.mutate_json_structure(data)
+            return json.dumps(mutated_data)
+
+        except Exception as e:
+            logger.error(f"Error fuzzing data: {e}")
+            return data_str

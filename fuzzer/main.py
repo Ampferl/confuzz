@@ -9,9 +9,13 @@ import sys
 
 SCOPE='localhost:5051'
 STRATEGY = Strategies.BASELINE
+OPTS = {
+    "feedback_log_file": "../scripts/feedback.json",
+    "fuzz_timeout": 10,
+}
 
 async def main():
-    proxy = init_proxy(scope=SCOPE, strategy=STRATEGY)
+    proxy = init_proxy(scope=SCOPE, strategy=STRATEGY, fuzz_opts=OPTS)
     try:
         await proxy.run()
     except KeyboardInterrupt:
