@@ -1,6 +1,7 @@
 from core.interception import init_proxy
-
-from utils import Strategies
+from core.driver import run_driver
+from core.shared import state
+from core.strategies import Strategies
 
 import asyncio
 import signal
@@ -16,9 +17,14 @@ OPTS = {
 
 async def main():
     proxy = init_proxy(scope=SCOPE, strategy=STRATEGY, fuzz_opts=OPTS)
+
+    proxy_task = asyncio.create_task(proxy.run())
+    driver_task = asyncio.create_task(run_driver())
     try:
-        await proxy.run()
+        await asyncio.gather(proxy_task, driver_task)
     except KeyboardInterrupt:
+        print("\n[*] Shutting down...")
+        state.running = False
         proxy.shutdown()
 
 

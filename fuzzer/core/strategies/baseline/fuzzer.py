@@ -2,14 +2,15 @@ import logging
 import random
 import json
 
-from core.baseline.mutator import Mutator
+from core.strategies import Fuzzer
+from core.strategies.baseline.mutator import Mutator
 
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("baseline")
 
 
-class BaselineFuzzer:
+class BaselineFuzzer(Fuzzer):
     def __init__(self):
         self.mutator = Mutator()
 

@@ -1,9 +1,13 @@
 from mitmproxy import http, options
 from mitmproxy.tools import dump
 
-from utils import in_scope, Strategies
-from core.baseline.fuzzer import BaselineFuzzer
+from utils import in_scope
+from core.strategies import Strategies
+from core.shared import state
+from core.strategies.baseline.fuzzer import BaselineFuzzer
+from core.strategies.llm.fuzzer import LLMGeneratorFuzzer, LLMMutatorFuzzer
 
+import asyncio
 import logging
 import json
 
@@ -21,23 +25,25 @@ class InterceptionAddon:
         self.strategy = strategy
         self.fuzzer = None
         self.opts = opts
-        self.feedback_data = None
+        self.feedback_data = []
 
         match strategy:
             case Strategies.BASELINE:
                 self.fuzzer = BaselineFuzzer()
                 logger.info(f"[i] Baseline Fuzzer initialized")
             case Strategies.LLM_GENERATION:
+                self.fuzzer = LLMGeneratorFuzzer(self.opts.get("model"))
                 logger.info(f"[i] LLM generation-based Fuzzer initialized")
             case Strategies.LLM_MUTATION:
+                self.fuzzer = LLMMutatorFuzzer(self.opts.get("model"))
                 logger.info(f"[i] LLM mutation-based Fuzzer initialized")
 
-    def _reload_feedback_data(self):
+    def fetch_feedback_queue(self):
         try:
-            with open(self.opts.get("feedback_log_file"), "r") as f:
-                self.feedback_data = json.load(f)
-        except:
-            self.feedback_data = None
+            while not state.feedback_queue.empty():
+                self.feedback_data.append(state.feedback_queue.get_nowait())
+        except asyncio.QueueEmpty:
+            pass
 
     def request(self, flow: http.HTTPFlow) -> None:
         if in_scope(self.scope, flow):
@@ -48,7 +54,7 @@ class InterceptionAddon:
             logger.info(f"(<-) Intercepted Response: {flow.response.status_code}")
 
             original_body = flow.response.text
-
+            self.fetch_feedback_queue()
 
             match self.strategy:
                 case Strategies.BASELINE:
@@ -56,10 +62,12 @@ class InterceptionAddon:
                     flow.response.text = mutated_body
                     logger.info(f"[Baseline] Mutated Response: {mutated_body[:100]}...")
                 case Strategies.LLM_GENERATION:
-                    self._reload_feedback_data()
+                    mutated_body = self.fuzzer.fuzz(original_body, self.feedback_data)
+                    flow.response.text = mutated_body
                     logger.info(f"LLM Generation: {flow.response.text}")
                 case Strategies.LLM_MUTATION:
-                    self._reload_feedback_data()
+                    mutated_body = self.fuzzer.fuzz(original_body, self.feedback_data)
+                    flow.response.text = mutated_body
                     logger.info(f"LLM Mutation: {flow.response.text}")
 
 

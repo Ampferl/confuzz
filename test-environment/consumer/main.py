@@ -189,7 +189,7 @@ async def scenario_3(response: Response):
             log_eval(3, data.text, f"Modified target url not accessible", response.status_code, exploited=True, exposed=False) # TODO Evaluate this a exploited? (FN)
         else:
             log_eval(3, data.text, f"Failed to fetch avatar", response.status_code)
-        return {"error": f"Failed to fetch avatar: {str(e)}"}
+        return {"error": f"Connection refused: Failed to fetch avatar: {str(e)}"} # TODO The "Connection Refused' could indicate a SSRF
 
 
 
