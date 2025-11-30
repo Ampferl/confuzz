@@ -1,11 +1,14 @@
 import enum
 
 class Strategies(enum.Enum):
-    BASELINE = 0
-    LLM_GENERATION = 1
-    LLM_MUTATION = 2
+    BASELINE = 'baseline'
+    LLM_GENERATION = 'llm_generation'
+    LLM_MUTATION = 'llm_mutation'
+
+    def __str__(self):
+        return self.value
 
 
 class Fuzzer:
-    def fuzz(self, data):
+    def fuzz(self, data, **kwargs):
         pass

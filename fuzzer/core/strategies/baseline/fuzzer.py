@@ -6,15 +6,17 @@ from core.strategies import Fuzzer
 from core.strategies.baseline.mutator import Mutator
 
 
-logging.basicConfig(level=logging.DEBUG)
+
+logging.basicConfig(filename="fuzzer.log", level=logging.INFO)
 logger = logging.getLogger("baseline")
+
 
 
 class BaselineFuzzer(Fuzzer):
     def __init__(self):
         self.mutator = Mutator()
 
-    def fuzz(self, data_str: str) -> str:
+    def fuzz(self, data_str: str, **kwargs) -> str:
         try:
             """
             - 10% Bit Flipping (Error Handling)

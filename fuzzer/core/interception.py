@@ -11,7 +11,7 @@ import asyncio
 import logging
 import json
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(filename="fuzzer.log", level=logging.INFO)
 logger = logging.getLogger("proxy")
 
 # Disable logs from mitmproxy
@@ -26,7 +26,10 @@ class InterceptionAddon:
         self.fuzzer = None
         self.opts = opts
         self.feedback_data = []
+        self._init_fuzzer(strategy)
 
+
+    def _init_fuzzer(self, strategy: Strategies):
         match strategy:
             case Strategies.BASELINE:
                 self.fuzzer = BaselineFuzzer()
@@ -38,16 +41,13 @@ class InterceptionAddon:
                 self.fuzzer = LLMMutatorFuzzer(self.opts.get("model"))
                 logger.info(f"[i] LLM mutation-based Fuzzer initialized")
 
+
     def fetch_feedback_queue(self):
         try:
             while not state.feedback_queue.empty():
                 self.feedback_data.append(state.feedback_queue.get_nowait())
-        except asyncio.QueueEmpty:
-            pass
+        except asyncio.QueueEmpty: pass
 
-    def request(self, flow: http.HTTPFlow) -> None:
-        if in_scope(self.scope, flow):
-            logger.info(f"(->) Intercepted Request: {flow.request.method} {flow.request.path}")
 
     def response(self, flow: http.HTTPFlow) -> None:
         if in_scope(self.scope, flow):
@@ -56,26 +56,16 @@ class InterceptionAddon:
             original_body = flow.response.text
             self.fetch_feedback_queue()
 
-            match self.strategy:
-                case Strategies.BASELINE:
-                    mutated_body = self.fuzzer.fuzz(original_body)
-                    flow.response.text = mutated_body
-                    logger.info(f"[Baseline] Mutated Response: {mutated_body[:100]}...")
-                case Strategies.LLM_GENERATION:
-                    mutated_body = self.fuzzer.fuzz(original_body, self.feedback_data)
-                    flow.response.text = mutated_body
-                    logger.info(f"LLM Generation: {flow.response.text}")
-                case Strategies.LLM_MUTATION:
-                    mutated_body = self.fuzzer.fuzz(original_body, self.feedback_data)
-                    flow.response.text = mutated_body
-                    logger.info(f"LLM Mutation: {flow.response.text}")
+            mutated_body = self.fuzzer.fuzz(original_body, feedback=self.feedback_data, request=flow.request.text)
+            flow.response.text = mutated_body
+            logger.info(f"[{self.strategy.name}]: {flow.response.text}")
 
+            state.fuzz_finished = asyncio.get_event_loop().time()
 
 
 def init_proxy(scope: str, strategy: Strategies, fuzz_opts: dict|None = None):
-
     opts = options.Options(listen_host='0.0.0.0', listen_port=8080, ssl_insecure=True)
     master = dump.DumpMaster(opts, with_termlog=False, with_dumper=False)
-    master.addons.add(InterceptionAddon(scope=scope, strategy=strategy, opts=fuzz_opts))
-    logger.info(f"Listening on {opts.listen_host}:{opts.listen_port}")
+    interception_addon = InterceptionAddon(scope=scope, strategy=strategy, opts=fuzz_opts)
+    master.addons.add(interception_addon)
     return master

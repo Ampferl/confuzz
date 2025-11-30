@@ -3,6 +3,7 @@ import httpx
 import logging
 from core.shared import state
 
+
 CONSUMER_HOST = "http://localhost:5050"
 
 SCENARIOS = {
@@ -14,12 +15,15 @@ SCENARIOS = {
     5: {"url": "/api/v1/orders/recommendations", "method": "GET"},
 }
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+logging.basicConfig(filename="fuzzer.log", level=logging.INFO)
 logger = logging.getLogger("driver")
 
+
+# TODO Refactor
 async def send_request(id):
     target = SCENARIOS[id]
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=None) as client:
         feedback = {
             "scenario": id,
             "path": target['url'],
@@ -37,14 +41,26 @@ async def send_request(id):
                 method=target['method'],
                 url=f"{CONSUMER_HOST}{target['url']}"
             )
+            print("Hello World")
 
             latency = asyncio.get_event_loop().time() - start_ts
 
-            feedback["status_code"] = resp.status_code
-            feedback["body"] = resp.text
-            feedback["latency"] = latency
+            consumer_latency = asyncio.get_event_loop().time() - state.fuzz_finished
+            llm_latency = latency - consumer_latency
+            if consumer_latency > 5:
+                feedback["error"] = "TIMEOUT"
+                logger.warning(f"[Driver] Consumer latency: {consumer_latency}")
+                logger.warning(f"[Driver] Total latency: {latency}")
+            else:
+                feedback["status_code"] = resp.status_code
+                feedback["body"] = resp.text
+            feedback["latency"] = {
+                "total": latency,
+                "consumer": consumer_latency,
+                "fuzzer": llm_latency
+            }
 
-            logger.info(f"[Driver] Consumer replied: {resp.status_code} ({latency:.2f}s)")
+            logger.info(f"[Driver] Consumer Feedback: {feedback}")
 
         except httpx.TimeoutException:
             feedback["error"] = "TIMEOUT"
@@ -55,13 +71,16 @@ async def send_request(id):
 
         await state.feedback_queue.put(feedback)
 
-async def run_driver():
+
+async def run_driver(proxy):
     while state.running:
+        # TODO
+        # - Set options ?
+        # - trigger scenarios/campaigns
+        # - auto mode for evaluation
         inp = input("$ ")
-        if inp == "feedback":
-            while not state.feedback_queue.empty():
-                logger.info(state.feedback_queue.get_nowait())
-        elif inp == "exit":
+        if inp == "exit":
+            proxy.shutdown()
             state.running = False
         elif inp == '':
             continue

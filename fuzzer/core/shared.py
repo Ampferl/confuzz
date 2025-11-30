@@ -5,6 +5,7 @@ class SharedState:
         # Pass feedback through queue from Driver to Proxy
         self.feedback_queue = asyncio.Queue()
         # Start timeout countdown if fuzzer quits
+        self.fuzz_finished = None
         self.running = True
 
 
