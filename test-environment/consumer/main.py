@@ -87,7 +87,12 @@ async def scenario_1(id: int, response: Response):
         log_eval(1, data.text, "Could not parse JSON response", response.status_code)
         return {"error": "Invalid upstream response"}
 
-    data_json = User(**data_json)
+    try:
+        data_json = User(**data_json)
+    except:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        log_eval(1, data.text, "Missing key in JSON", response.status_code)
+        return {"error": "Missing key in JSON"}
     USERS_DB[id] = data_json
 
     response.status_code = status.HTTP_200_OK
