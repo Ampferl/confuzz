@@ -35,13 +35,13 @@ async def send_request(id):
 
         try:
             start_ts = asyncio.get_event_loop().time()
-
+            print(f"testing: 'Scenario {id}' -> {target['url']}")
             # 1. Trigger Consumer
             resp = await client.request(
                 method=target['method'],
                 url=f"{CONSUMER_HOST}{target['url']}"
             )
-            print("Hello World")
+            state.stats["requests"] += 1
 
             latency = asyncio.get_event_loop().time() - start_ts
 
@@ -54,11 +54,13 @@ async def send_request(id):
             else:
                 feedback["status_code"] = resp.status_code
                 feedback["body"] = resp.text
+                print(f"[FEED]: {resp.text}")
             feedback["latency"] = {
                 "total": latency,
                 "consumer": consumer_latency,
                 "fuzzer": llm_latency
             }
+            print(f"[STATS] Latency\n- Total: {latency}\n- Consumer: {consumer_latency}\n- Fuzzer: {llm_latency}")
 
             logger.info(f"[Driver] Consumer Feedback: {feedback}")
 
@@ -78,11 +80,15 @@ async def run_driver(proxy):
         # - Set options ?
         # - trigger scenarios/campaigns
         # - auto mode for evaluation
+        # - stats
         inp = input("$ ")
         if inp == "exit":
             proxy.shutdown()
             state.running = False
         elif inp == '':
             continue
+        elif inp == "stats":
+            print("== Statistics ==")
+            print(f"Total requests: {state.stats['requests']}")
         elif inp in "123450":
             await send_request(int(inp))

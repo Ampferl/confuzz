@@ -2,6 +2,7 @@ from core.interception import init_proxy
 from core.driver import run_driver
 from core.shared import state
 from core.strategies import Strategies
+from core.strategies.llm.connector import LLModels
 
 import argparse
 import asyncio
@@ -24,9 +25,9 @@ async def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--strategy", type=Strategies, default=Strategies.BASELINE, choices=list(Strategies), help="Fuzzing strategy to use")
+    parser.add_argument("--strategy", type=Strategies, default=Strategies.BASELINE, choices=list(Strategies), help="Fuzzing strategy to use")
     parser.add_argument("--scope", type=str, default='localhost:5051', help="Scope to intercept (default: localhost:5051)")
-    parser.add_argument("-m", "--model", type=str, default='qwen3:8b', help="LLM model to use for fuzzing (default: qwen3:8b)")
+    parser.add_argument("--model", type=LLModels, default=LLModels.QWEN3, choices=list(LLModels), help="LLM model to use for fuzzing (default: qwen3:8b)")
     args = parser.parse_args()
 
     signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))

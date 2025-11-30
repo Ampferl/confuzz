@@ -54,6 +54,7 @@ class InterceptionAddon:
             logger.info(f"(<-) Intercepted Response: {flow.response.status_code}")
 
             original_body = flow.response.text
+            print(f"[ORIG]: {original_body}")
             self.fetch_feedback_queue()
 
             mutated_body = self.fuzzer.fuzz(original_body, feedback=self.feedback_data, request=flow.request.text)

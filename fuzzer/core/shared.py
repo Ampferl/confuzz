@@ -8,5 +8,9 @@ class SharedState:
         self.fuzz_finished = None
         self.running = True
 
+        self.stats = {
+            "requests": 0
+        }
+
 
 state = SharedState()
