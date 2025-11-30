@@ -1,7 +1,7 @@
 from mitmproxy import http, options
 from mitmproxy.tools import dump
 
-from utils import in_scope
+from utils import in_scope, colorize_changes
 from core.strategies import Strategies
 from core.shared import state
 from core.strategies.baseline.fuzzer import BaselineFuzzer
@@ -45,7 +45,7 @@ class InterceptionAddon:
     def fetch_feedback_queue(self):
         try:
             while not state.feedback_queue.empty():
-                self.feedback_data.append(state.feedback_queue.get_nowait())
+                self.feedback_data[-1]["feedback"].append(state.feedback_queue.get_nowait())
         except asyncio.QueueEmpty: pass
 
 
@@ -57,9 +57,16 @@ class InterceptionAddon:
             print(f"[ORIG]: {original_body}")
             self.fetch_feedback_queue()
 
-            mutated_body = self.fuzzer.fuzz(original_body, feedback=self.feedback_data, request=flow.request.text)
+            mutated_body = self.fuzzer.fuzz(original_body, feedback=None if len(self.feedback_data) == 0 else self.feedback_data[-1], request=flow.request.path, opts=self.opts)
+            print(f"[FUZZ]: {colorize_changes(original_body, mutated_body, mode='changes')}")
             flow.response.text = mutated_body
             logger.info(f"[{self.strategy.name}]: {flow.response.text}")
+            self.feedback_data.append({
+                "path": flow.request.path,
+                "response": original_body,
+                "fuzzed": mutated_body,
+                "feedback": []
+            })
 
             state.fuzz_finished = asyncio.get_event_loop().time()
 

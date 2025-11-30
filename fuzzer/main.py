@@ -11,14 +11,15 @@ import sys
 
 
 async def main(args):
-    proxy = init_proxy(scope=args.scope, strategy=args.strategy, fuzz_opts={"model": args.model})
+    proxy = init_proxy(scope=args.scope, strategy=args.strategy, fuzz_opts={"model": args.model, "think": args.think, "temperature": args.temperature})
 
-    proxy_task = asyncio.create_task(proxy.run())
-    driver_task = asyncio.create_task(run_driver(proxy=proxy))
     try:
+        proxy_task = asyncio.create_task(proxy.run())
+        driver_task = asyncio.create_task(run_driver(proxy=proxy))
         await asyncio.gather(proxy_task, driver_task)
     except KeyboardInterrupt:
         print("\n[*] Shutting down...")
+        # THIS HAS TO BE EXECUTED IF SIGINT!
         state.running = False
         proxy.shutdown()
 
@@ -28,6 +29,8 @@ if __name__ == "__main__":
     parser.add_argument("--strategy", type=Strategies, default=Strategies.BASELINE, choices=list(Strategies), help="Fuzzing strategy to use")
     parser.add_argument("--scope", type=str, default='localhost:5051', help="Scope to intercept (default: localhost:5051)")
     parser.add_argument("--model", type=LLModels, default=LLModels.QWEN3, choices=list(LLModels), help="LLM model to use for fuzzing (default: qwen3:8b)")
+    parser.add_argument("--think", action="store_true", help="Enable thinking on the LLM")
+    parser.add_argument("--temperature", type=float, default=0.7, choices=[i/10 for i in range(1, 13, 1)], help="Change the temperature of the LLM")
     args = parser.parse_args()
 
     signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))
