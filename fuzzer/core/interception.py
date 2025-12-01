@@ -48,6 +48,10 @@ class InterceptionAddon:
                 self.feedback_data[-1]["feedback"].append(state.feedback_queue.get_nowait())
         except asyncio.QueueEmpty: pass
 
+    def request(self, flow: http.HTTPFlow) -> None:
+        if in_scope("intercept.confuzz", flow):
+            state.ssrf_detected = True
+
 
     def response(self, flow: http.HTTPFlow) -> None:
         if in_scope(self.scope, flow):
@@ -56,8 +60,9 @@ class InterceptionAddon:
             original_body = flow.response.text
             print(f"[ORIG]: {original_body}")
             self.fetch_feedback_queue()
+            # Analyze Feedback?
 
-            mutated_body = self.fuzzer.fuzz(original_body, feedback=None if len(self.feedback_data) == 0 else self.feedback_data[-1], request=flow.request.path, opts=self.opts)
+            mutated_body = self.fuzzer.fuzz(original_body, feedback=None if len(self.feedback_data) == 0 else self.feedback_data, request=flow.request.path, opts=self.opts)
             print(f"[FUZZ]: {colorize_changes(original_body, mutated_body, mode='changes')}")
             flow.response.text = mutated_body
             logger.info(f"[{self.strategy.name}]: {flow.response.text}")

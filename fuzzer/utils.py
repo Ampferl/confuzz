@@ -1,3 +1,4 @@
+from typing import List, Dict, Any, Optional
 from mitmproxy import http
 import difflib
 
@@ -35,3 +36,22 @@ def in_scope(host: str, flow: http.HTTPFlow) -> bool:
         host, port = host.split(":")
         return flow.request.host == host and flow.request.port == int(port)
     return flow.request.host == host
+
+
+
+def filter_last_elements(items: Optional[list], search: str, key: str, amount: int) -> List[Dict[str, Any]]:
+
+    if not items:
+        return []
+    if amount <= 0:
+        return []
+
+    matches: List[Dict[str, Any]] = []
+    for d in reversed(items):
+        if not isinstance(d, dict):
+            continue
+        if d.get(key) == search:
+            matches.append(d)
+            if len(matches) == amount:
+                break
+    return list(reversed(matches))

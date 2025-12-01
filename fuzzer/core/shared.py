@@ -7,6 +7,10 @@ class SharedState:
         # Start timeout countdown if fuzzer quits
         self.fuzz_finished = None
         self.running = True
+        self.ssrf_detected = False
+        self.opts = {
+            "max_requests": 1000,
+        }
 
         self.stats = {
             "requests": 0

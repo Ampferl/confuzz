@@ -1,5 +1,5 @@
 from core.interception import init_proxy
-from core.driver import run_driver
+from core.driver.console import run_driver
 from core.shared import state
 from core.strategies import Strategies
 from core.strategies.llm.connector import LLModels
@@ -12,6 +12,8 @@ import sys
 
 async def main(args):
     proxy = init_proxy(scope=args.scope, strategy=args.strategy, fuzz_opts={"model": args.model, "think": args.think, "temperature": args.temperature})
+    state.opts["max_requests"] = args.max_requests
+    state.opts["list"] = args.list
 
     try:
         proxy_task = asyncio.create_task(proxy.run())
@@ -31,6 +33,8 @@ if __name__ == "__main__":
     parser.add_argument("--model", type=LLModels, default=LLModels.QWEN3, choices=list(LLModels), help="LLM model to use for fuzzing (default: qwen3:8b)")
     parser.add_argument("--think", action="store_true", help="Enable thinking on the LLM")
     parser.add_argument("--temperature", type=float, default=0.7, choices=[i/10 for i in range(1, 13, 1)], help="Change the temperature of the LLM")
+    parser.add_argument("--max-requests", type=int, default=1000, help="Maximum number of requests to send to the consumer per scenario (default: 1000)")
+    parser.add_argument("--list", type=str, default="custom", choices=["custom", "blns"], help="List of strings to use for baseline fuzzing")
     args = parser.parse_args()
 
     signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))

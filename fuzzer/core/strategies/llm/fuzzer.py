@@ -19,7 +19,7 @@ class LLMFuzzer(Fuzzer):
         self.system_prompt = self.autoprompter.build_system_prompt()
 
     def fuzz(self, data_str: str, feedback: dict, request: str, opts: dict, **kwargs) -> str:
-        user_prompt = self.autoprompter.build_user_prompt(request_path=request, response=data_str, feedback=feedback)
+        user_prompt = self.autoprompter.build_user_prompt(request_path=request, response=data_str, feedback_dict=feedback)
         print(f"[PROMPT]:\n{30*'='}\n{user_prompt}\n{30*'='}")
 
         mutated_data = self.provider.generate(user_prompt, self.system_prompt, temperature=opts.get("temperature", False), think=opts.get("think", False))

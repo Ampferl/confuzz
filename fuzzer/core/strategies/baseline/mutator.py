@@ -5,7 +5,7 @@ import json
 NAUGHTY_STRINGS = [
     "../../etc/passwd",
     "' OR '1'='1",
-    "http://localhost:22",
+    "http://intercept.confuzz",
     "null",
     "true",
     "false"

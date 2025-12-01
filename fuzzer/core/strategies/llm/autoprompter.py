@@ -1,59 +1,74 @@
 import json
 from enum import Enum
+from utils import filter_last_elements
+from core.shared import state
+
+HISTORY_SIZE = 5
+
+ATTACK_VECTORS = [
+"""
+1. API1:2023 Broken Object Level Authorization (BOLA):
+   - Targets: Filenames, resource IDs.
+   - Payloads: "../../etc/passwd", "..\\Windows\\win.ini"
+""",
+"""
+2. API2:2023 Broken Authentication:
+   - Targets: Session tokens, auth flags.
+   - Payloads: "authenticated": true, "is_admin": true, remove tokens.
+""",
+"""
+3. API3:2023 Broken Object Property Level Authorization (Mass Assignment):
+   - Targets: User objects, config.
+   - Payloads: "role": "admin", "permissions": ["all"], "balance": 1000000
+""",
+"""
+4. API4:2023 Unrestricted Resource Consumption (DoS):
+   - Targets: Loops, sleep timers, allocation sizes.
+   - Payloads: 999999999, -1, 1000000, "A" * 50000
+""",
+"""
+5. API5:2023 Broken Function Level Authorization (BFLA):
+   - Targets: "role" fields, "group" IDs in response.
+   - Payloads: "is_admin": true, "role": "admin", "group_id": 0, "access_level": 99
+""",
+"""
+6. API6:2023 Unrestricted Access to Sensitive Business Flows:
+   - Targets: Quantity fields, price fields, coupon codes.
+   - Payloads: "price": 0.00, "quantity": -1, "discount": 100%
+""",
+"""
+7. API7:2023 Server-Side Request Forgery (SSRF):
+   - Targets: URLs, webhooks.
+   - Payload: "http://intercept.confuzz"
+""",
+"""
+8. API8:2023 Security Misconfiguration:
+   - Targets: JSON syntax, types.
+   - Payloads: Malformed JSON, types (int vs string), "null"
+""",
+"""
+9. API9:2023 Improper Inventory Management:
+   - Targets: "version" fields, API path suggestions.
+   - Payloads: "v1", "v0", "beta", "test", "internal"
+""",
+"""
+10. API10:2023 Unsafe Consumption of APIs:
+    - Targets: SQL injection (if a database is involved)
+    - Payloads: "' OR 1=1 --", "; cat /etc/passwd"
+"""]
 
 ATTACK_VECTOR = """
 ATTACK KNOWLEDGE BASE (OWASP API Top 10 2023):
+"""+''.join(ATTACK_VECTORS)
 
-1. API1:2023 Broken Object Level Authorization (BOLA):
-   - Concept: Manipulating IDs to access objects belonging to other users.
-   - Targets: Filenames or Resource IDs in response.
-   - Payloads: "../../etc/passwd", "..\\Windows\\win.ini", "/root/.ssh/id_rsa", "file:///etc/hosts"
+def select_vector(vectors, attempt, start=5):
+    if attempt < start:
+        return None
+    bi = (attempt // start) - 1
+    vi = bi % len(vectors)
+    return vectors[vi]
 
-2. API2:2023 Broken Authentication:
-   - Concept: Exploiting weak authentication mechanisms.
-   - Targets: Session tokens, "is_authenticated" flags in response.
-   - Payloads: Change "authenticated": false to true, remove token fields, inject "admin" tokens.
 
-3. API3:2023 Broken Object Property Level Authorization (BOPLA / Mass Assignment):
-   - Concept: Unauthorized access or modification of object properties.
-   - Targets: User objects or configuration objects.
-   - Payloads: Inject privileged fields like "is_admin": true, "role": "admin", "permissions": ["all", "root"], "balance": 9999999
-
-4. API4:2023 Unrestricted Resource Consumption (DoS):
-   - Concept: Overloading the API to cause Denial of Service.
-   - Targets: Numeric fields controlling loops, sleep timers, or allocation.
-   - Payloads: 999999999, -1, 1000000, "A" * 100000 (Large String), Array with 10000 items.
-
-5. API5:2023 Broken Function Level Authorization (BFLA):
-   - Concept: Accessing administrative functions from a low-privileged account.
-   - Targets: "role" fields, "group" IDs in response.
-   - Payloads: "is_admin": true, "role": "admin", "group_id": 0, "access_level": 99
-
-6. API6:2023 Unrestricted Access to Sensitive Business Flows:
-   - Concept: Abusing business logic (e.g., buying 0 items for free).
-   - Targets: Quantity fields, price fields, coupon codes.
-   - Payloads: "price": 0.00, "quantity": -1, "discount": 100%
-
-7. API7:2023 Server-Side Request Forgery (SSRF):
-   - Concept: Forcing the server to make requests to internal resources.
-   - Targets: URLs, webhooks, avatar links, callback URIs.
-   - Payloads: "http://localhost:22", "http://127.0.0.1:80", "http://169.254.169.254/latest/meta-data/"
-
-8. API8:2023 Security Misconfiguration:
-   - Concept: Exploiting unhandled errors or insecure default settings.
-   - Targets: JSON structure, type enforcement.
-   - Payloads: Malformed JSON (missing brace), invalid types (string instead of int), "null", excessively nested JSON.
-
-9. API9:2023 Improper Inventory Management:
-   - Concept: Accessing deprecated or hidden API versions.
-   - Targets: "version" fields, API path suggestions.
-   - Payloads: "v1", "v0", "beta", "test", "internal"
-
-10. API10:2023 Unsafe Consumption of APIs:
-    - Concept: Trusting external data blindly, leading to Injection attacks.
-    - Targets: Search terms, categories, filter parameters, SQL/Command contexts.
-    - Payloads (SQLi): "' OR 1=1 --", "admin' --", "UNION SELECT 1,2,3 --"
-"""
 
 class AutoprompterModes(Enum):
     GENERATION = "generation"
@@ -63,28 +78,26 @@ class AutoprompterModes(Enum):
 class Autoprompter:
     def __init__(self, mode: AutoprompterModes = AutoprompterModes.MUTATION):
         self.mode = mode
+        self.attempts = 0
+        self.current_path = None
         self.system_prompts = {
             AutoprompterModes.MUTATION: f"""
-You are ConFuzz, a highly advanced API Security Fuzzer acting as a Senior Penetration Tester.
-Your goal is to mutate a valid JSON response to exploit Consumer-Side Vulnerabilities.
-A driver is sending trigger requests to the consumer, which is requesting a producer server. 
-You get the intercepted response and you need to mutate it to trigger a vulnerability.
-You also get the feedback from the previous attempt, which comes from the driver trigger request.
-Use it to guide your strategy and avoid unnecessary repetitions.
+You are ConFuzz, an advanced LLM-driven HTTP JSON API Security Fuzzer.
+Your goal is to mutate a valid JSON response to exploit Consumer-Side Vulnerabilities (OWASP API Security Top 10).
 
 {ATTACK_VECTOR}
 
 INSTRUCTIONS:
-1. Analyze the "Original Valid Response" to understand the schema and the meaning of the keys and values and try to identify potential weak points.
-2. If feedback from the previous attempt is provided, analyze it carefully to understand the impact of the previous payload to modify it to trigger a vulnerability.
-3. Select ONE field and then YOU MUST mutate it, based on its name and value.
-4. Inject a payload into that field.
-5. UNIQUENESS DIRECTIVE: If feedback is provided, you MUST NOT repeat the "Previous Fuzzed Response". CHANGE IT!
-6. OUTPUT RULE: Return ONLY the raw JSON string. Do not use Markdown formatting (no ```json). Do not provide explanations.
+1. Analyze the "Original Valid Response" to understand the schema.
+2. **SCHEMA PRESERVATION DIRECTIVE**: You MUST NOT add new keys to the JSON unless you are specifically attempting a Mass Assignment attack. For all other attacks, you MUST ONLY modify the VALUES of existing keys. Do not invent keys if they are not in the original.
+3. Select ONE target field from the original response and inject a malicious payload into its VALUE.
+4. **UNIQUENESS DIRECTIVE**: You must NOT repeat any payload found in the "HISTORY OF ATTEMPTS".
+5. **OUTPUT**: Return ONLY the raw JSON string. No Markdown.
 """,
             AutoprompterModes.GENERATION: f"""
-You are ConFuzz. Generate a malicious JSON payload from scratch based on the request context.
+You are ConFuzz. Generate a malicious JSON payload from scratch.
 {ATTACK_VECTOR}
+Do not repeat payloads from the history.
 OUTPUT RULE: Return ONLY the raw JSON string.
 """
         }
@@ -93,7 +106,11 @@ OUTPUT RULE: Return ONLY the raw JSON string.
         return self.system_prompts.get(self.mode)
 
 
-    def build_user_prompt(self, request_path: str, response: str, feedback: dict = None) -> str:
+    def build_user_prompt(self, request_path: str, response: str, feedback_dict: dict = None) -> str:
+        if self.current_path != request_path:
+            self.attempts = 0
+            self.current_path = request_path
+
         prompt = f"Target Endpoint: {request_path}\n"
 
         if self.mode == AutoprompterModes.MUTATION:
@@ -102,26 +119,33 @@ OUTPUT RULE: Return ONLY the raw JSON string.
         elif self.mode == AutoprompterModes.GENERATION:
             prompt += f"Context Data (if any): \n{response}\n"
             prompt += "Task: Generate a completely new malicious JSON response for this endpoint.\n"
+        previous_attempts = filter_last_elements(feedback_dict, request_path, "path", HISTORY_SIZE)
 
-        if feedback and len(feedback.get('feedback')) > 0 and feedback.get('path') == request_path:
-            prompt += "\n--- FEEDBACK FROM PREVIOUS ATTEMPT ON THE TRIGGER REQUEST ---\n"
-            prompt += f"Previous Original Response: {feedback.get('response')}\n"
-            prompt += f"Previous Fuzzed Response: {feedback.get('fuzzed')}\n"
-            prompt += f"Feedback from previous Attempt:\n"
-            collect_errors = []
-            for i, f in enumerate(feedback.get('feedback')):
-                if f.get('error') is not None and f.get('error') not in collect_errors:
-                    collect_errors.append(f.get('error'))
-                else:
-                    prompt += f"- Response Code: {f.get('status_code')}\n"
-                    prompt += f"- Response Body: {f.get('body')}\n"
 
-            for e in collect_errors:
-                match e:
-                    case "TIMEOUT":
-                        prompt += "Guidance: The previous payload caused a timeout. This is good! Try to maximize this effect or verify it.\n"
-                    case "CONNECTION_ERROR":
-                        prompt += "Guidance: The previous payload caused a connection error. This is bad! Try to minimize this effect.\n"
-        prompt += "Strategy: Try a more aggressive payload or a different attack vector.\n"
-        prompt += "\nReturn ONLY the JSON payload:"
+        last_attempt = None
+        if len(previous_attempts) > 0:
+            prompt += "\n--- HISTORY OF PREVIOUS ATTEMPTS (DO NOT REPEAT!) ---\n"
+            last_attempt = previous_attempts[-1]
+
+        for i, feedback in enumerate(previous_attempts):
+            if feedback and len(feedback.get('feedback')) > 0:
+                prompt += f"Attempt #{i + 1}:\n"
+                prompt += f"  - Payload: {feedback.get('fuzzed')}\n"
+                if len(feedback.get('feedback')) > 0:
+                    prompt += f"  - Result: Status {feedback.get('feedback')[0].get('body')} | Status {feedback.get('feedback')[0].get('status_code')} | Error: {feedback.get('feedback')[0].get('error')}\n\n"
+
+        if last_attempt and len(last_attempt.get('feedback')) > 0:
+            match last_attempt.get('feedback')[0].get('error'):
+                case "TIMEOUT":
+                    prompt += "\nGuidance: The last payload caused a TIMEOUT. This is a success! Try to modify it slightly to confirm the DoS.\n"
+                case "CONNECTION_ERROR":
+                    prompt += "\nGuidance: The last payload crashed the service. Try to reproduce it.\n"
+                case _:
+                    prompt += "\nGuidance: The previous attempts failed or were handled safely. SWITCH STRATEGY. Try a different field or attack vector from the Knowledge Base.\n"
+
+        current_attack_vector = select_vector(ATTACK_VECTORS, self.attempts)
+        if current_attack_vector:
+            prompt += f"\n--- CURRENT ATTACK STRATEGY ---{current_attack_vector}"
+        prompt += "\nReminder: Do NOT add new keys. Only modify values. Return ONLY the JSON payload!"
+        self.attempts += 1
         return prompt
