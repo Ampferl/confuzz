@@ -11,10 +11,11 @@ import sys
 
 
 async def main(args):
-    proxy = init_proxy(scope=args.scope, strategy=args.strategy, fuzz_opts={"model": args.model, "think": args.think, "temperature": args.temperature})
     state.opts["max_requests"] = args.max_requests
     state.opts["list"] = args.list
 
+
+    proxy = init_proxy(scope=args.scope, strategy=args.strategy, fuzz_opts={"model": args.model, "think": args.think, "temperature": args.temperature})
     try:
         proxy_task = asyncio.create_task(proxy.run())
         driver_task = asyncio.create_task(run_driver(proxy=proxy))

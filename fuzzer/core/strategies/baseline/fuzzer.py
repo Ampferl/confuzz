@@ -4,7 +4,7 @@ import json
 
 from core.strategies import Fuzzer
 from core.strategies.baseline.mutator import Mutator
-
+from core.shared import state
 
 
 logging.basicConfig(filename="fuzzer.log", level=logging.INFO)
@@ -14,7 +14,7 @@ logger = logging.getLogger("baseline")
 
 class BaselineFuzzer(Fuzzer):
     def __init__(self):
-        self.mutator = Mutator()
+        self.mutator = Mutator(state.opts.get("list"))
 
     def fuzz(self, data_str: str, **kwargs) -> str:
         try:

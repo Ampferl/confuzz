@@ -1,0 +1,15 @@
+# NAUGHTY_STRINGS
+../../etc/passwd
+' OR '1'='1
+http://intercept.confuzz
+null
+true
+false
+undefined
+
+# NAUGHTY_INTS
+0
+-1
+2147483647
+9223372036854775807
+999999999
