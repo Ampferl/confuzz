@@ -18,6 +18,8 @@ def detect_exploit(feedback: dict) -> bool:
     scenario_result = SCENARIOS.get(feedback.get("scenario")).get("expected_result")
     if scenario_result != "" and scenario_result in feedback["body"]:
         return True
+    if feedback["status_code"] == 500:
+        return True
     return False
 
 

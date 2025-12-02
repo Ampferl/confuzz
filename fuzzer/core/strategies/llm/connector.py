@@ -25,6 +25,7 @@ class LLModels(Enum):
     DEEPSEEK_R1 = "deepseek-r1:8b"
     GPT5_NANO = "gpt-5-nano-2025-08-07" # Price: Input=$0.05, Output=$0.40 (per 1M tokens)
     GPT_5_1 = "gpt-5.1-2025-11-13" # Price: Input=$1.25, Output=$10.00 (per 1M tokens)
+    # llama3.2
 
     def __str__(self):
         return self.value

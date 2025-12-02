@@ -14,7 +14,7 @@ logger = logging.getLogger("baseline")
 
 class BaselineFuzzer(Fuzzer):
     def __init__(self):
-        self.mutator = Mutator(state.opts.get("list"))
+        self.mutator = Mutator(state.opts.get("list")) # TODO Replace Mutator with MutationFuzzer from Fuzzing Book
 
     def fuzz(self, data_str: str, **kwargs) -> str:
         try:

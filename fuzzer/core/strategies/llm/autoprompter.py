@@ -9,17 +9,17 @@ ATTACK_VECTORS = [
 """
 1. API1:2023 Broken Object Level Authorization (BOLA):
    - Targets: Filenames, resource IDs.
-   - Payloads: "../../etc/passwd", "..\\Windows\\win.ini"
+   - Payloads: "etc/passwd", "..\\Windows\\win.ini"
 """,
 """
 2. API2:2023 Broken Authentication:
    - Targets: Session tokens, auth flags.
-   - Payloads: "authenticated": true, "is_admin": true, remove tokens.
+   - Payloads: "authenticated": true, remove tokens.
 """,
 """
 3. API3:2023 Broken Object Property Level Authorization (Mass Assignment):
    - Targets: User objects, config.
-   - Payloads: "role": "admin", "permissions": ["all"], "balance": 1000000
+   - Payloads:  "is_admin": true, "permissions": ["all"], "balance": 1000000
 """,
 """
 4. API4:2023 Unrestricted Resource Consumption (DoS):
@@ -29,7 +29,7 @@ ATTACK_VECTORS = [
 """
 5. API5:2023 Broken Function Level Authorization (BFLA):
    - Targets: "role" fields, "group" IDs in response.
-   - Payloads: "is_admin": true, "role": "admin", "group_id": 0, "access_level": 99
+   - Payloads: "is_admin": true, "group_id": 0, "access_level": 99
 """,
 """
 6. API6:2023 Unrestricted Access to Sensitive Business Flows:
@@ -54,7 +54,7 @@ ATTACK_VECTORS = [
 """
 10. API10:2023 Unsafe Consumption of APIs:
     - Targets: SQL injection (if a database is involved)
-    - Payloads: "' OR 1=1 --", "; cat /etc/passwd"
+    - Payloads: "'--", "'; DROP TABLE users--", "; cat /etc/passwd"
 """]
 
 ATTACK_VECTOR = """
@@ -143,7 +143,7 @@ OUTPUT RULE: Return ONLY the raw JSON string.
                 case _:
                     prompt += "\nGuidance: The previous attempts failed or were handled safely. SWITCH STRATEGY. Try a different field or attack vector from the Knowledge Base.\n"
 
-        current_attack_vector = select_vector(ATTACK_VECTORS, self.attempts)
+        current_attack_vector = select_vector(ATTACK_VECTORS, self.attempts, start=state.opts.get("vector_attempts", 5)) # TODO Modify select_vector to allow setting the vector attempts and start attempts
         if current_attack_vector:
             prompt += f"\n--- CURRENT ATTACK STRATEGY ---{current_attack_vector}"
         prompt += "\nReminder: Do NOT add new keys. Only modify values. Return ONLY the JSON payload!"

@@ -13,6 +13,7 @@ import sys
 async def main(args):
     state.opts["max_requests"] = args.max_requests
     state.opts["list"] = args.list
+    state.opts["vector_attempts"] = args.vector_attempts
 
 
     proxy = init_proxy(scope=args.scope, strategy=args.strategy, fuzz_opts={"model": args.model, "think": args.think, "temperature": args.temperature})
@@ -35,6 +36,7 @@ if __name__ == "__main__":
     parser.add_argument("--think", action="store_true", help="Enable thinking on the LLM")
     parser.add_argument("--temperature", type=float, default=0.7, choices=[i/10 for i in range(1, 13, 1)], help="Change the temperature of the LLM")
     parser.add_argument("--max-requests", type=int, default=1000, help="Maximum number of requests to send to the consumer per scenario (default: 1000)")
+    parser.add_argument("--vector-attempts", type=int, default=5, help="Number of attempts to generate a new vector for a given scenario (default: 5)")
     parser.add_argument("--list", type=str, default="custom", choices=["custom", "blns"], help="List of strings to use for baseline fuzzing")
     args = parser.parse_args()
 
