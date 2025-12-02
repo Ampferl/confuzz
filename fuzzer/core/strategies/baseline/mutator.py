@@ -1,42 +1,43 @@
 import random
 import json
 
+###################################################################################
+## This Baseline Fuzzer is based on the MutationFuzzer of the fuzzing book       ##
+## Github: https://github.com/uds-se/fuzzingbook/                                ##
+## Website: https://www.fuzzingbook.org/                                         ##
+## Copyright (c) 2018-2020 Saarland University, CISPA, authors, and contributors ##
+###################################################################################
 
 class Mutator:
-    def __init__(self, list_name: str = "custom"):
-        self.string_list = self.load_list(list_name)
-        print(f"Loaded {len(self.string_list)} strings from {list_name}.txt")
+    @staticmethod
+    def delete_random_character(s: str) -> str:
+        if s == "":
+            return s
 
-    def load_list(self, filename: str) -> list:
-        with open(f"../resources/lists/{filename}.txt", "r") as f:
-            lines = f.read().splitlines()
-            # Remove if line is empty or starts with #
-            cleaned = [line.strip() for line in lines]
-            return [line for line in cleaned if line and not line.startswith("#")]
-            return lines
+        pos = random.randint(0, len(s) - 1)
+        # print("Deleting", repr(s[pos]), "at", pos)
+        return s[:pos] + s[pos + 1:]
 
-    def bit_flip(self, data: str, probability: float = 0.05) -> str:
-        data_list = list(data)
-        for i in range(len(data_list)):
-            if random.random() < probability:
-                # Replace current char with a random ASCII char
-                data_list[i] = chr(random.randint(32, 126))
-        return "".join(data_list)
+    @staticmethod
+    def insert_random_character(s: str) -> str:
+        """Returns s with a random character inserted"""
+        pos = random.randint(0, len(s))
+        random_character = chr(random.randrange(32, 127))
+        # print("Inserting", repr(random_character), "at", pos)
+        return s[:pos] + random_character + s[pos:]
 
-    def mutate_json_structure(self, data: dict) -> dict:
-        if isinstance(data, dict):
-            for key, value in data.items():
-                data[key] = self.mutate_json_structure(value)
-        elif isinstance(data, list):
-            for i in range(len(data)):
-                data[i] = self.mutate_json_structure(data[i])
-        elif isinstance(data, str) or (isinstance(data, int) and not isinstance(data, bool)):
-            # 20% Chance to replace a string with a Naughty String
-            if random.random() < 0.2:
-                return random.choice(self.string_list)
+    @staticmethod
+    def flip_random_character(s):
+        """Returns s with a random bit flipped in a random position"""
+        if s == "":
+            return s
 
-        return data
-
+        pos = random.randint(0, len(s) - 1)
+        c = s[pos]
+        bit = 1 << random.randint(0, 6)
+        new_c = chr(ord(c) ^ bit)
+        # print("Flipping", bit, "in", repr(c) + ", giving", repr(new_c))
+        return s[:pos] + new_c + s[pos + 1:]
 
 
 if __name__ == '__main__':

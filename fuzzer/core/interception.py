@@ -4,6 +4,7 @@ from mitmproxy.tools import dump
 from utils import in_scope, colorize_changes
 from core.strategies import Strategies
 from core.shared import state
+from core.strategies.custom_baseline.fuzzer import CustomBaselineFuzzer
 from core.strategies.baseline.fuzzer import BaselineFuzzer
 from core.strategies.llm.fuzzer import LLMGeneratorFuzzer, LLMMutatorFuzzer
 
@@ -31,6 +32,9 @@ class InterceptionAddon:
 
     def _init_fuzzer(self, strategy: Strategies):
         match strategy:
+            case Strategies.CUSTOM_BASELINE:
+                self.fuzzer = CustomBaselineFuzzer()
+                logger.info(f"[i] Custom Baseline Fuzzer initialized")
             case Strategies.BASELINE:
                 self.fuzzer = BaselineFuzzer()
                 logger.info(f"[i] Baseline Fuzzer initialized")

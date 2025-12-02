@@ -102,6 +102,8 @@ async def run_scenario_loop(id):
             print(f"{YELLOW}[!] Scenario {id} Exhausted! Stopping.{RESET}")
             break
 
+        await asyncio.sleep(state.opts.get("rate_limit", 0))
+
 
 async def run_auto_mode():
     print(f"[*] Starting AUTO MODE (All Scenarios)...")

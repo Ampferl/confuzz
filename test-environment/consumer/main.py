@@ -64,7 +64,7 @@ async def scenario_0(response: Response):
             log_eval(0, data.text, f"Successful read: {content}", response.status_code, exploited=(filename != 'app.log'), exposed=(filename != 'app.log'))
             return {"log_content": content}
     except:
-        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        response.status_code = status.HTTP_400_BAD_REQUEST
         log_eval(0, data.text, "Unsuccessfully changed filename", response.status_code, exploited=True, exposed=False)
         return {"error": f"Error reading log file."}
 
@@ -187,7 +187,7 @@ async def scenario_3(response: Response):
 
             return {"avatar_size": len(img_resp.content), "status": img_resp.status_code}
     except Exception as e:
-        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        response.status_code = status.HTTP_400_BAD_REQUEST
         if target_url == "http://www.http2demo.io/img/refresh-icon.png": # TODO change the target_url
             log_eval(3, data.text, f"Original target url not accessible", response.status_code)
         elif is_url(target_url):
