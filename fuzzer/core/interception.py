@@ -38,12 +38,15 @@ class InterceptionAddon:
             case Strategies.BASELINE:
                 self.fuzzer = BaselineFuzzer()
                 logger.info(f"[i] Baseline Fuzzer initialized")
-            case Strategies.LLM_GENERATION:
-                self.fuzzer = LLMGeneratorFuzzer(self.opts.get("model"))
-                logger.info(f"[i] LLM generation-based Fuzzer initialized")
-            case Strategies.LLM_MUTATION:
+            case Strategies.LLM:
                 self.fuzzer = LLMMutatorFuzzer(self.opts.get("model"))
                 logger.info(f"[i] LLM mutation-based Fuzzer initialized")
+            #case Strategies.LLM_GENERATION:
+            #    self.fuzzer = LLMGeneratorFuzzer(self.opts.get("model"))
+            #    logger.info(f"[i] LLM generation-based Fuzzer initialized")
+            #case Strategies.LLM_MUTATION:
+            #    self.fuzzer = LLMMutatorFuzzer(self.opts.get("model"))
+            #    logger.info(f"[i] LLM mutation-based Fuzzer initialized")
 
 
     def fetch_feedback_queue(self):
