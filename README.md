@@ -1,5 +1,10 @@
 # ConFuzz
-ConFuzz is a novel LLM-driven Fuzzer designed for security testing the unsafe consumption APIs.
+ConFuzz is a novel LLM-driven Fuzzer designed for security testing the unsafe consumption APIs.  
+This is a scientific prototype for my bachelor's thesis to design and evaluate Consumer-Side API fuzzing using large language models (LLMs). 
+
+>[!warning]  
+>ConFuzz is only effective for fuzzing the test environment due to a lack of a general feedback analysis engine.  
+>In order to use it in other projects, either the [`detect_exploit()`](https://github.com/Ampferl/confuzz/blob/main/fuzzer/core/driver/trigger.py#L15) function must be adapted or a feedback analysis module must be implemented.
 
 ## Usage
 ### ConFuzz
