@@ -10,7 +10,9 @@ class SharedState:
         self.ssrf_detected = False
         self.opts = {
             "max_requests": 1000,
-            "list": "custom"
+            "attack_threshold": 5,
+            "list": "custom",
+            "debug": False
         }
 
         self.stats = {

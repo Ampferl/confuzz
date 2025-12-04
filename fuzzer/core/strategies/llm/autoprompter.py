@@ -8,52 +8,52 @@ HISTORY_SIZE = 5
 ATTACK_VECTORS = [
 """
 1. API1:2023 Broken Object Level Authorization (BOLA):
-   - Targets: Filenames, resource IDs.
+   - Targets: Filenames, Resource IDs
    - Payloads: "etc/passwd", "..\\Windows\\win.ini"
 """,
 """
-2. API2:2023 Broken Authentication:
-   - Targets: Session tokens, auth flags.
+2. API2:2023 Broken Authentication: 
+   - Targets: Session tokens, auth flags
    - Payloads: "authenticated": true, remove tokens.
 """,
 """
 3. API3:2023 Broken Object Property Level Authorization (Mass Assignment):
-   - Targets: User objects, config.
+   - Targets: User objects, configs
    - Payloads:  "is_admin": true, "permissions": ["all"], "balance": 1000000
 """,
 """
 4. API4:2023 Unrestricted Resource Consumption (DoS):
-   - Targets: Loops, sleep timers, allocation sizes.
+   - Targets: Loops, sleep timers, allocation sizes, calculations
    - Payloads: 999999999, -1, 1000000, "A" * 50000
 """,
 """
 5. API5:2023 Broken Function Level Authorization (BFLA):
-   - Targets: "role" fields, "group" IDs in response.
+   - Targets: role fields, group IDs 
    - Payloads: "is_admin": true, "group_id": 0, "access_level": 99
 """,
 """
 6. API6:2023 Unrestricted Access to Sensitive Business Flows:
-   - Targets: Quantity fields, price fields, coupon codes.
+   - Targets: Quantity fields, price fields, coupon codes
    - Payloads: "price": 0.00, "quantity": -1, "discount": 100%
 """,
 """
 7. API7:2023 Server-Side Request Forgery (SSRF):
-   - Targets: URLs, webhooks.
+   - Targets: URLs, webhooks, Links
    - Payload: "http://intercept.confuzz"
 """,
 """
 8. API8:2023 Security Misconfiguration:
-   - Targets: JSON syntax, types.
+   - Targets: JSON syntax, types
    - Payloads: Malformed JSON, types (int vs string), "null"
 """,
 """
 9. API9:2023 Improper Inventory Management:
-   - Targets: "version" fields, API path suggestions.
+   - Targets: version fields, API path suggestions
    - Payloads: "v1", "v0", "beta", "test", "internal"
 """,
 """
 10. API10:2023 Unsafe Consumption of APIs:
-    - Targets: SQL injection (if a database is involved)
+    - Targets: SQL injections, Command Injections
     - Payloads: "'--", "'; DROP TABLE users--", "; cat /etc/passwd"
 """]
 
@@ -61,13 +61,15 @@ ATTACK_VECTOR = """
 ATTACK KNOWLEDGE BASE (OWASP API Top 10 2023):
 """+''.join(ATTACK_VECTORS)
 
-def select_vector(vectors, attempt, start=5):
-    if attempt < start:
-        return None
-    bi = (attempt // start) - 1
-    vi = bi % len(vectors)
-    return vectors[vi]
 
+def select_vector(vectors, attempt, threshold=5, duration=None):
+    if duration is None:
+        duration = threshold
+    if attempt < threshold:
+        return None
+    delta = attempt - threshold
+    vector_index = (delta // duration) % len(vectors)
+    return vectors[vector_index]
 
 
 class AutoprompterModes(Enum):
@@ -143,7 +145,7 @@ OUTPUT RULE: Return ONLY the raw JSON string.
                 case _:
                     prompt += "\nGuidance: The previous attempts failed or were handled safely. SWITCH STRATEGY. Try a different field or attack vector from the Knowledge Base.\n"
 
-        current_attack_vector = select_vector(ATTACK_VECTORS, self.attempts, start=state.opts.get("vector_attempts", 5)) # TODO Modify select_vector to allow setting the vector attempts and start attempts
+        current_attack_vector = select_vector(ATTACK_VECTORS, self.attempts, threshold=state.opts.get("attack_threshold", 5)) # TODO Modify select_vector to allow setting the vector attempts and start attempts
         if current_attack_vector:
             prompt += f"\n--- CURRENT ATTACK STRATEGY ---{current_attack_vector}"
         prompt += "\nReminder: Do NOT add new keys. Only modify values. Return ONLY the JSON payload!"

@@ -2,6 +2,7 @@ from core.strategies import Fuzzer
 from core.strategies.llm.connector import LLModels
 from core.strategies.llm.autoprompter import Autoprompter, AutoprompterModes
 from core.strategies.llm.parser import ResponseParser
+from core.shared import state
 
 import logging
 import json
@@ -17,6 +18,7 @@ class LLMFuzzer(Fuzzer):
         self.provider = self.model.get_provider()
         self.autoprompter = Autoprompter(AutoprompterModes.MUTATION)
         self.system_prompt = self.autoprompter.build_system_prompt()
+        if state.opts.get("debug", False): print(f"[SY]:\n{30*'='}\n{self.system_prompt}\n{30*'='}")
 
     def fuzz(self, data_str: str, feedback: dict, request: str, opts: dict, **kwargs) -> str:
         user_prompt = self.autoprompter.build_user_prompt(request_path=request, response=data_str, feedback_dict=feedback)
