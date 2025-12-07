@@ -30,16 +30,17 @@ async def send_request(id):
     async with httpx.AsyncClient(timeout=None) as client:
         feedback = {
             "scenario": id,
+            "timestamp": datetime.now().isoformat(),
             "path": target['url'],
             "status_code": None,
             "latency": 0,
             "error": None,
-            "body": ""
+            "body": "",
+            "exploited": False
         }
 
         try:
             start_ts = asyncio.get_event_loop().time()
-
             resp = await client.request(
                 method=target['method'],
                 url=f"{CONSUMER_HOST}{target['url']}"
@@ -80,6 +81,7 @@ async def send_request(id):
         if detect_exploit(feedback):
             print(f"{GREEN}[!!!] VULNERABILITY/BUG FOUND FOR SCENARIO {id}{RESET}")
             stats_tracker.mark_exploited(id)
+            feedback["exploited"] = True
             await state.feedback_queue.put(feedback)
             return True
 
@@ -114,3 +116,10 @@ async def run_auto_mode():
 
     print("[*] Auto Mode Finished.")
     stats_tracker.print_stats()
+    # Hack to get last log
+
+    async with httpx.AsyncClient(timeout=2, proxy="http://localhost:8080") as client:
+        await client.request(
+            method='get',
+            url=f"http://log.confuzz"
+        )

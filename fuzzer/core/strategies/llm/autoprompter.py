@@ -9,7 +9,7 @@ ATTACK_VECTORS = [
 """
 1. API1:2023 Broken Object Level Authorization (BOLA):
    - Targets: Filenames, Resource IDs
-   - Payloads: "etc/passwd", "..\\Windows\\win.ini"
+   - Payloads: "/etc/passwd", "..\\Windows\\win.ini"
 """,
 """
 2. API2:2023 Broken Authentication: 

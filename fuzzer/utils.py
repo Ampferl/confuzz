@@ -1,11 +1,29 @@
 from typing import List, Dict, Any, Optional
+from core.strategies import Strategies
 from mitmproxy import http
 import difflib
+import logging
+import json
 
 RED = '\033[91m'
 GREEN = '\033[92m'
 YELLOW = '\033[93m'
 RESET = '\033[0m'
+
+
+eval_logger = logging.getLogger("fuzzer-evaluation")
+eval_logger.setLevel(logging.INFO)
+
+def init_logger(strategy: Strategies):
+    if not eval_logger.handlers:
+        handler = logging.FileHandler("fuzzer_eval.log")
+        formatter = logging.Formatter('%(asctime)s - %(message)s')
+        handler.setFormatter(formatter)
+        eval_logger.addHandler(handler)
+        eval_logger.info(f"Evaluation logger initialized for {strategy.name}")
+
+def log_eval(feedback):
+    eval_logger.info(json.dumps(feedback))
 
 
 def colorize_changes(original: str, modified: str, mode: str = "diff"):

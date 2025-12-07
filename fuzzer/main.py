@@ -1,6 +1,7 @@
 from core.interception import init_proxy
 from core.driver.console import run_driver
 from core.shared import state
+from utils import init_logger
 from core.strategies import Strategies
 from core.strategies.llm.connector import LLModels
 
@@ -11,12 +12,13 @@ import sys
 
 
 async def main(args):
+    init_logger(strategy=args.strategy)
+
     state.opts["max_requests"] = args.max_requests
     state.opts["list"] = args.list
     state.opts["attack_threshold"] = args.threshold
     state.opts["rate_limit"] = args.rate_limit
     state.opts["debug"] = args.debug
-
 
     proxy = init_proxy(scope=args.scope, strategy=args.strategy, fuzz_opts={"model": args.model, "think": args.think, "temperature": args.temperature})
     try:

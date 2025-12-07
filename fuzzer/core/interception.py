@@ -1,7 +1,7 @@
 from mitmproxy import http, options
 from mitmproxy.tools import dump
 
-from utils import in_scope, colorize_changes
+from utils import in_scope, colorize_changes, log_eval
 from core.strategies import Strategies
 from core.shared import state
 from core.strategies.custom_baseline.fuzzer import CustomBaselineFuzzer
@@ -53,11 +53,15 @@ class InterceptionAddon:
         try:
             while not state.feedback_queue.empty():
                 self.feedback_data[-1]["feedback"].append(state.feedback_queue.get_nowait())
+                log_eval(self.feedback_data[-1])
         except asyncio.QueueEmpty: pass
 
     def request(self, flow: http.HTTPFlow) -> None:
         if in_scope("intercept.confuzz", flow):
             state.ssrf_detected = True
+        elif in_scope("log.confuzz", flow):
+            print("[LOG] Saved all logs to 'fuzzer_eval.log'")
+            self.fetch_feedback_queue()
 
 
     def response(self, flow: http.HTTPFlow) -> None:
