@@ -1,6 +1,7 @@
 .idea
 __pycache__
-
+eval/
 *.db
 *.log
 .venv
+example_report

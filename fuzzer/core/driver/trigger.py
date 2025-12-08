@@ -38,7 +38,7 @@ async def send_request(id):
             "body": "",
             "exploited": False
         }
-
+        print(f"[ATTEMPT] {stats_tracker.scenario_stats[id]['requests']}")
         try:
             start_ts = asyncio.get_event_loop().time()
             resp = await client.request(
@@ -89,6 +89,13 @@ async def send_request(id):
         return False
 
 
+async def _trigger_log_feedback():
+    async with httpx.AsyncClient(timeout=2, proxy="http://localhost:8080") as client:
+        await client.request(
+            method='get',
+            url=f"http://log.confuzz"
+        )
+
 async def run_scenario_loop(id):
     print(f"[*] Starting Fuzzing Campaign for Scenario {id}...")
     while state.running:
@@ -105,6 +112,7 @@ async def run_scenario_loop(id):
             break
 
         await asyncio.sleep(state.opts.get("rate_limit", 0))
+    await _trigger_log_feedback()
 
 
 async def run_auto_mode():
@@ -116,10 +124,3 @@ async def run_auto_mode():
 
     print("[*] Auto Mode Finished.")
     stats_tracker.print_stats()
-    # Hack to get last log
-
-    async with httpx.AsyncClient(timeout=2, proxy="http://localhost:8080") as client:
-        await client.request(
-            method='get',
-            url=f"http://log.confuzz"
-        )

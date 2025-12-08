@@ -1,10 +1,18 @@
 from fastapi import FastAPI
+import os
+
+PRODUCER_URL = os.getenv("PRODUCER_URL", "http://producer:5000/")
 
 app = FastAPI(title="Producer Service")
 
 @app.get("/health")
 async def healthcheck():
     return {"status": "ok", "service": "producer"}
+
+
+@app.get("/demo.png")
+async def avatar():
+    return {"avatar": "demo"}
 
 
 # Scenario 0 - API1:2023 Broken Object Level Authorization
@@ -29,7 +37,7 @@ async def scenario_2():
 @app.get("/upstream/user/profile")
 async def scenario_3():
     # TODO Change this to a URL from the producer?
-    return {"avatar_url": "http://www.http2demo.io/img/refresh-icon.png"}
+    return {"avatar_url": f"http://{PRODUCER_URL}/demo.png"}
 
 
 # Scenario 4 - API8:2023 Security Misconfiguration

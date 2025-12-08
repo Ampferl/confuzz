@@ -5,7 +5,13 @@ from core.driver.trigger import run_auto_mode, run_scenario_loop
 import asyncio
 
 
-async def run_driver(proxy):
+async def run_driver(proxy, auto=False):
+    if auto:
+        await asyncio.create_task(run_auto_mode())
+        proxy.shutdown()
+        state.running = False
+        return
+
     print("Driver ready. Type 'help' for commands.")
     while state.running:
         try:

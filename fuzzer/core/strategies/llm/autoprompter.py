@@ -19,7 +19,7 @@ ATTACK_VECTORS = [
 """
 3. API3:2023 Broken Object Property Level Authorization (Mass Assignment):
    - Targets: User objects, configs
-   - Payloads:  "is_admin": true, "permissions": ["all"], "balance": 1000000
+   - Payloads: "is_admin": true, "permissions": ["all"], "balance": 1000000
 """,
 """
 4. API4:2023 Unrestricted Resource Consumption (DoS):

@@ -23,7 +23,7 @@ async def main(args):
     proxy = init_proxy(scope=args.scope, strategy=args.strategy, fuzz_opts={"model": args.model, "think": args.think, "temperature": args.temperature})
     try:
         proxy_task = asyncio.create_task(proxy.run())
-        driver_task = asyncio.create_task(run_driver(proxy=proxy))
+        driver_task = asyncio.create_task(run_driver(proxy=proxy, auto=args.auto))
         await asyncio.gather(proxy_task, driver_task)
     except KeyboardInterrupt:
         print("\n[*] Shutting down...")
@@ -44,6 +44,7 @@ if __name__ == "__main__":
     parser.add_argument("--rate-limit", type=int, default=0, help="Specify how many seconds to sleep between requests (default: 0, no rate limit)")
     parser.add_argument("--list", type=str, default="custom", choices=["custom", "blns"], help="List of strings to use for baseline fuzzing")
     parser.add_argument("-d", "--debug", action="store_true", help="Enable debugging")
+    parser.add_argument("--auto", action="store_true", help="Automatically start fuzzing scenarios until exploited (default: False, manual mode)")
     args = parser.parse_args()
 
     signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))
