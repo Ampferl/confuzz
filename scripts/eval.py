@@ -100,6 +100,7 @@ class LogParser:
         print("-" * 67)
         print(f"{'Actual Positive':<15} | {tp:<18} (TP) | {fn:<18} (FN)")
         print(f"{'Actual Negative':<15} | {fp:<18} (FP) | {tn:<18} (TN)")
+        print("-" * 67)
 
     def draw_scenario_table(self):
         tbl_head = f"{'Scenario':<10} | {'Requests':<10} | {'Exploited (Ground Truth)':<25} | {'Detected by Fuzzer':<30} | {'Fuzzer Latency':<25} | {'TP':<5} | {'FP':<5} | {'FN':<5} | {'TN':<5} | {'Recall':<6} | {'Total Time':<11}"
@@ -181,7 +182,10 @@ class LogParser:
                 fn += 1
             elif not is_exploited_real and not is_detected_fuzzer:
                 tn += 1
-            latencies.append(fuzzer_entry["feedback"][0]["latency"]["fuzzer"])
+            try:
+                latencies.append(fuzzer_entry["feedback"][0]["latency"]["fuzzer"])
+            except:
+                print(f"[!] No latency found for entry: {fuzzer_entry}")
 
         recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
         latency = {
@@ -213,17 +217,23 @@ class LogParser:
                 fn += 1
             elif not is_exploited_real and not is_detected_fuzzer:
                 tn += 1
-            latencies.append(fuzzer_entry["feedback"][0]["latency"]["fuzzer"])
+            try:
+                latencies.append(fuzzer_entry["feedback"][0]["latency"]["fuzzer"])
+            except:
+                print(f"[!] No latency found for entry: {fuzzer_entry}")
 
         recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        accuracy = (tp + tn) / (tp+tn+fp+fn) if (tp+tn+fp+fn) > 0 else 0.0
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+
         latency = {
             "avg": statistics.mean(latencies) if latencies else 0.0,
             "median": statistics.median(latencies) if latencies else 0.0
         }
         total_time = float((self.fuzzer_entries[-1]["_dt"] - self.fuzzer_entries[0]["_dt"] + datetime.fromtimestamp(self.fuzzer_entries[-1]["feedback"][0]["latency"]["total"])).strftime('%S.%f'))
-        throughput = request_count / total_time
+        throughput = (request_count / total_time)*60
 
-        return {"tp": tp, "fp": fp, "fn": fn, "tn": tn, "recall": recall, "latency": latency, "request_count": request_count, "total_time": total_time, "throughput": throughput}
+        return {"tp": tp, "fp": fp, "fn": fn, "tn": tn, "recall": recall, "accuracy": accuracy, "precision": precision, "latency": latency, "request_count": request_count, "total_time": total_time, "throughput": throughput}
 
 
 def analyze(fuzzer_log, consumer_log):
@@ -367,7 +377,7 @@ def generate_latex_tables(d):
         return len(requests)
 
     print("\n" + "=" * 20 + " LATEX OUTPUT " + "=" * 20)
-    print_table("Time to First Bug per Scenario", get_ttfb)
+    print_table("Time to First Discovery per Scenario", get_ttfb)
     print_table("Total Requests per Scenario", get_req_count)
     print("=" * 54 + "\n")
 
@@ -396,18 +406,21 @@ def comp(compare, args):
         print(f"Average Requests: {avg_requests:.2f}")
         print("-" * 40)
         for c, v in d.items():
-            print(f"=============== {c} ===============")
-            print("Confusion Matrix:\n"
-                f"TP: {v['total_metrics']['tp']:>5} | {v['total_metrics']['fp']:<5} :FP\n"
-                f"{'-'*21}\n"
-                f"FN: {v['total_metrics']['fn']:>5} | {v['total_metrics']['tn']:<5} :TN\n")
-            print(f"Recall: {v['total_metrics']['recall']:.2%}")
+            print(f"{'='*30} {c} {'='*(48-len(c))}")
+            if args.table:
+                v["logParser"].draw_scenario_table()
+                print()
+            v["logParser"].draw_confusion_matrix(v["total_metrics"])
+            print()
+            print(f"Recall: {v['total_metrics']['recall']:.2%} (How many actual positive cases were correctly detected)")
+            print(f"Precision: {v['total_metrics']['precision']:.2%} (How many of Positive results are actually correct)")
+            print(f"Accuracy: {v['total_metrics']['accuracy']:.2%} (Overall correctness)")
             print(f"Requests: {v['total_metrics']['request_count']}")
             print(f"Total Time: {v['total_metrics']['total_time']:.2f}s")
             print(f"Throughput: {v['total_metrics']['throughput']:.2f} req/min")
             print(
-                f"Latency: Avg: {v['total_metrics']['latency']['avg']:.4f}s, Median: {v['total_metrics']['latency']['median']:.4f}s")
-            print("-" * 40)
+                f"Fuzzer Latency: Avg: {v['total_metrics']['latency']['avg']:.4f}s, Median: {v['total_metrics']['latency']['median']:.4f}s")
+            print("=" * 80)
     if args.latex:
         generate_latex_tables(d)
     if args.plot:
@@ -422,6 +435,7 @@ def main():
     parser.add_argument("-p", "--prefix", help="Prefix of log files")
     parser.add_argument("--debug", action="store_true", help="Print JSON details for TP and FP")
     parser.add_argument("--latex", action="store_true", help="Print stuff in latex format")
+    parser.add_argument("--table", action="store_true", help="Print table and confusion matrix")
     parser.add_argument("--plot", action="store_true", help="Plot diagrams")
     parser.add_argument("-a", "--analyze", action="store_true", help="Print analysis of a evaluation run")
     parser.add_argument("-c", "--compare", type=str, help="Print analysis of a evaluation run")

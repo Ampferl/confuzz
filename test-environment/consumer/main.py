@@ -148,7 +148,7 @@ async def scenario_2(response: Response):
         return {"status": "initialized", "duration": duration}
     except Exception as e:
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        log_eval(2, data.text, f"Unexpected Exception: {e}", response.status_code)
+        log_eval(2, data.text, f"Unexpected Exception: {e}", response.status_code, exploited=True, exposed=True)
         return {"error": str(e)}
 
 
