@@ -44,7 +44,7 @@ class LLModels(Enum):
 
 class OllamaProvider(LLMProvider):
     def __init__(self, model: LLModels, host: str):
-        self.client = ollama.Client(host=host, timeout=60.0)
+        self.client = ollama.Client(host=host, timeout=20.0)
         self.model = model
 
     def generate(self, prompt: str, system_prompt: Optional[str] = None, temperature: float = 0.7, think=False, **kwargs) -> str:

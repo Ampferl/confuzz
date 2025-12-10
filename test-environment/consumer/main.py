@@ -183,7 +183,7 @@ async def scenario_3(response: Response):
             img_resp = await client.get(target_url)
             # TODO think about returning the data e.g. for file:// tests
             response.status_code = status.HTTP_200_OK
-            if target_url != f"http://{PRODUCER_URL}/demo.png":
+            if target_url != f"{PRODUCER_URL}/demo.png":
                 log_eval(3, data.text, f"Server side request forgery", response.status_code, exploited=True, exposed=True)
             else:
                 log_eval(3, data.text, f"Successfully fetched avatar", response.status_code)
@@ -191,7 +191,7 @@ async def scenario_3(response: Response):
             return {"avatar_size": len(img_resp.content), "status": img_resp.status_code}
     except Exception as e:
         response.status_code = status.HTTP_400_BAD_REQUEST
-        if target_url == f"http://{PRODUCER_URL}/demo.png":
+        if target_url == f"{PRODUCER_URL}/demo.png":
             log_eval(3, data.text, f"Original target url not accessible", response.status_code)
         elif is_url(target_url):
             log_eval(3, data.text, f"Modified target url not accessible", response.status_code, exploited=True, exposed=False) # TODO Evaluate this a exploited? (FN)

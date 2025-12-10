@@ -103,7 +103,7 @@ class LogParser:
         print("-" * 67)
 
     def draw_scenario_table(self):
-        tbl_head = f"{'Scenario':<10} | {'Requests':<10} | {'Exploited (Ground Truth)':<25} | {'Detected by Fuzzer':<30} | {'Fuzzer Latency':<25} | {'TP':<5} | {'FP':<5} | {'FN':<5} | {'TN':<5} | {'Recall':<6} | {'Total Time':<11}"
+        tbl_head = f"{'Scenario':<10} | {'Requests':<10} | {'Exploited (Ground Truth)':<25} | {'Detected by Fuzzer':<30} | {'Fuzzer Latency':<25} | {'TP':<5} | {'FP':<5} | {'FN':<5} | {'TN':<5} | {'Total Time':<11}"
         print(tbl_head)
         print("-" * len(tbl_head))
 
@@ -154,7 +154,7 @@ class LogParser:
             latency_str = f"Avg={lat_avg:.2f}s Median={lat_med:.2f}s"
 
             total_time = f'{metrics["total_time"]:.2f}s'
-            print(f"S{scenario_id:<9} | {req_count:<10} | {c_status:<25} | {f_status:<30} | {latency_str:<25} | {metrics['tp']:<5} | {metrics['fp']:<5} | {metrics['fn']:<5} | {metrics['tn']:<5} | {metrics['recall']:<.2%} | {total_time:<11}")
+            print(f"S{scenario_id:<9} | {req_count:<10} | {c_status:<25} | {f_status:<30} | {latency_str:<25} | {metrics['tp']:<5} | {metrics['fp']:<5} | {metrics['fn']:<5} | {metrics['tn']:<5} | {total_time:<11}")
 
 
     def get_scenario_metrics(self, scenario_id):
@@ -192,7 +192,7 @@ class LogParser:
             "avg": statistics.mean(latencies) if latencies else 0.0,
             "median": statistics.median(latencies) if latencies else 0.0
         }
-        total_time = float((scenario_entries[-1]["_dt"] - scenario_entries[0]["_dt"] + datetime.fromtimestamp(scenario_entries[-1]["feedback"][0]["latency"]["total"])).strftime('%S.%f'))
+        total_time = (scenario_entries[-1]["_dt"] - scenario_entries[0]["_dt"]).total_seconds() + float(datetime.fromtimestamp(scenario_entries[-1]["feedback"][0]["latency"]["total"]).strftime('%S.%f'))
 
         return {"tp": tp, "fp": fp, "fn": fn, "tn": tn, "recall": recall, "latency": latency, "request_count": request_count, "total_time": total_time}
 
@@ -230,7 +230,8 @@ class LogParser:
             "avg": statistics.mean(latencies) if latencies else 0.0,
             "median": statistics.median(latencies) if latencies else 0.0
         }
-        total_time = float((self.fuzzer_entries[-1]["_dt"] - self.fuzzer_entries[0]["_dt"] + datetime.fromtimestamp(self.fuzzer_entries[-1]["feedback"][0]["latency"]["total"])).strftime('%S.%f'))
+        total_time = (self.fuzzer_entries[-1]["_dt"] - self.fuzzer_entries[0]["_dt"]).total_seconds() + float(datetime.fromtimestamp(self.fuzzer_entries[-1]["feedback"][0]["latency"]["total"]).strftime('%S.%f'))
+
         throughput = (request_count / total_time)*60
 
         return {"tp": tp, "fp": fp, "fn": fn, "tn": tn, "recall": recall, "accuracy": accuracy, "precision": precision, "latency": latency, "request_count": request_count, "total_time": total_time, "throughput": throughput}
@@ -308,7 +309,105 @@ def plot_timeline(d):
     plt.show()
 
 
-def generate_latex_tables(d):
+def plot_boxplot(d, cap_limit=1000):
+    scenario_values = defaultdict(list)
+    all_scenarios = set()
+
+    for run_id, data in d.items():
+        requests = data['logParser'].matched_requests
+        if not requests:
+            continue
+
+        requests.sort(key=lambda x: x['fuzzer']['_dt'])
+
+        scenarios_in_run = set(
+            r['consumer'].get("scenario") for r in requests if r['consumer'].get("scenario") is not None)
+        all_scenarios.update(scenarios_in_run)
+
+        found_in_this_run = set()
+
+        scenario_counters = defaultdict(int)
+
+        for req in requests:
+            s_id = req['consumer'].get("scenario")
+            if s_id is None: continue
+
+            scenario_counters[s_id] += 1
+
+            is_exploited = False
+            if req['fuzzer'].get("feedback") and any(fb.get("exploited") is True for fb in req['fuzzer']["feedback"]):
+                is_exploited = True
+
+            if is_exploited and s_id not in found_in_this_run:
+                found_in_this_run.add(s_id)
+
+                val = scenario_counters[s_id]
+
+                scenario_values[s_id].append(min(val, cap_limit))
+
+        for s_id in scenarios_in_run:
+            if s_id not in found_in_this_run:
+                scenario_values[s_id].append(cap_limit)
+
+    try:
+        sorted_scenarios = sorted(list(all_scenarios), key=lambda x: int(x))
+    except (ValueError, TypeError):
+        sorted_scenarios = sorted(list(all_scenarios))
+
+    plot_data = []
+    labels = []
+    box_colors = []
+
+    for s_id in sorted_scenarios:
+        vals = scenario_values.get(s_id, [])
+
+        if not vals:
+            plot_data.append([])
+            labels.append(f"S{s_id}")
+            box_colors.append("white")
+            continue
+
+        plot_data.append(vals)
+        labels.append(f"S{s_id}")
+
+        if min(vals) >= cap_limit:
+            box_colors.append("lightgray")
+        else:
+            box_colors.append("lightblue")
+
+    if not any(plot_data):
+        print(f"[!] No data found to plot.")
+        return
+
+    plt.figure(figsize=(12, 6))
+
+    bplot = plt.boxplot(plot_data, labels=labels, patch_artist=True, medianprops=dict(color="black"))
+
+    for patch, color in zip(bplot['boxes'], box_colors):
+        patch.set_facecolor(color)
+
+    plt.title(f"Requests until First Discovery (Cap: {cap_limit})")
+    plt.xlabel("Scenario")
+    plt.ylabel("Request Count (Per Scenario)")
+
+    plt.axhline(y=cap_limit, color='r', linestyle='--', alpha=0.5, linewidth=1.5)
+
+    plt.ylim(0, cap_limit + (cap_limit * 0.05))
+
+    from matplotlib.patches import Patch
+    legend_elements = [
+        Patch(facecolor='lightblue', edgecolor='black', label='Vulnerability Found'),
+        Patch(facecolor='lightgray', edgecolor='black', label='Not Found (Exhausted)'),
+        plt.Line2D([0], [0], color='r', linestyle='--', label=f'Limit ({cap_limit})')
+    ]
+    plt.legend(handles=legend_elements, loc='upper right')
+
+    plt.grid(True, linestyle='--', alpha=0.7, axis='y')
+    plt.tight_layout()
+    plt.show()
+
+
+def generate_latex_tables(d, cap=1000):
     all_scenarios = set()
     for run_id, data in d.items():
         all_scenarios.update(data['logParser'].scenarios)
@@ -343,6 +442,8 @@ def generate_latex_tables(d):
                 ]
 
                 value = content_extractor(s_requests)
+                if title == "Total Requests per Scenario" and value == cap:
+                    value = "N/A"
                 row_data.append(str(value))
 
             print(" & ".join(row_data) + " \\\\")
@@ -383,6 +484,8 @@ def generate_latex_tables(d):
 
 def comp(compare, args):
     d = {}
+    total_requests = 0
+    total_time = 0
     for c in compare:
         fuzzer_log = f"{c}_fuzz.log"
         consumer_log = f"{c}_cons.log"
@@ -400,6 +503,8 @@ def comp(compare, args):
             "total_metrics": logParser.get_total_metrics(),
             "scenario_metrics": scenario_metrics
         }
+        total_requests += d[c]["total_metrics"]["request_count"]
+        total_time += d[c]["total_metrics"]["total_time"]
     if args.analyze:
         print("-" * 40)
         avg_requests = sum(d[m]["total_metrics"]["request_count"] for m in d) / len(d)
@@ -423,8 +528,15 @@ def comp(compare, args):
             print("=" * 80)
     if args.latex:
         generate_latex_tables(d)
-    if args.plot:
-        plot_timeline(d)
+    match args.plot:
+        case 'timeline':
+            plot_timeline(d)
+        case 'boxplot':
+            plot_boxplot(d)
+        case _:
+            print("No plot selected")
+    print(f"Total Requests: {total_requests}")
+    print(f"Total Time: {total_time:.2f}s")
     return d
 
 
@@ -436,7 +548,7 @@ def main():
     parser.add_argument("--debug", action="store_true", help="Print JSON details for TP and FP")
     parser.add_argument("--latex", action="store_true", help="Print stuff in latex format")
     parser.add_argument("--table", action="store_true", help="Print table and confusion matrix")
-    parser.add_argument("--plot", action="store_true", help="Plot diagrams")
+    parser.add_argument("--plot", choices=["timeline", "boxplot", "boxplot_requests"], help="Plot diagrams")
     parser.add_argument("-a", "--analyze", action="store_true", help="Print analysis of a evaluation run")
     parser.add_argument("-c", "--compare", type=str, help="Print analysis of a evaluation run")
 

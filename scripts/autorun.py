@@ -1,15 +1,26 @@
 import subprocess
+import argparse
 import os
 import shutil
 import json
 
 RUNS_PER_MODEL = 5
+START_AT = 1
 
 
 MODEL_CONFIGS = [
-    {"strategy": "baseline", "model": "baseline", "requests": 1000}
+    # Finished
+    #{"strategy": "baseline", "model": "baseline", "requests": 1000},
     #{"strategy": "llm", "model": "qwen3:8b", "requests": 1000},
-    #{"strategy": "llm", "model": "deepseek-r1:8b", "requests": 1000}
+    #{"strategy": "llm", "model": "qwen3:1.7b", "requests": 1000},
+    #{"strategy": "llm", "model": "qwen3:0.6b", "requests": 1000},
+    #{"strategy": "llm", "model": "deepseek-r1:8b", "requests": 1000},
+    #{"strategy": "llm", "model": "gpt-5", "requests": 1000},
+    #{"strategy": "llm", "model": "gpt-5-nano", "requests": 1000},
+
+    # ToDo
+    {"strategy": "llm", "model": "gpt-5-mini", "requests": 1000},
+    {"strategy": "llm", "model": "deepseek-r1:1.5b", "requests": 1000},
 ]
 
 BASE_EVAL_DIR = "../evaluation"
@@ -31,7 +42,7 @@ def run_evaluation():
         target_dir = os.path.join(BASE_EVAL_DIR, model_name)
         os.makedirs(target_dir, exist_ok=True)
 
-        for run_id in range(1, RUNS_PER_MODEL + 1):
+        for run_id in range(START_AT, RUNS_PER_MODEL + START_AT):
             print(f"\n[Run {run_id}/{RUNS_PER_MODEL}] Executing fuzzer...")
 
             cmd = [
@@ -74,6 +85,13 @@ def run_evaluation():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--runs", type=int, default=RUNS_PER_MODEL, help="Number of runs per model (default: 5)")
+    parser.add_argument("--start", type=int, default=START_AT, help="Start at run ID (default: 1)")
+    args = parser.parse_args()
+    if args.runs > 0: RUNS_PER_MODEL = args.runs
+    if args.start > 0: START_AT = args.start
+
     if not os.path.exists("main.py"):
         print("Please run this script in the 'fuzzer/' directory.")
     else:

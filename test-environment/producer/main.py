@@ -37,7 +37,7 @@ async def scenario_2():
 @app.get("/upstream/user/profile")
 async def scenario_3():
     # TODO Change this to a URL from the producer?
-    return {"avatar_url": f"http://{PRODUCER_URL}/demo.png"}
+    return {"avatar_url": f"{PRODUCER_URL}/demo.png"}
 
 
 # Scenario 4 - API8:2023 Security Misconfiguration
