@@ -121,6 +121,21 @@ def get_total_tokens(data):
     return result
 
 
+def custom():
+
+    file_stats = {
+        "gpt-5": {},
+        "gpt-5-mini": {},
+        "gpt-5-nano": {}
+    }
+    for model in file_stats.keys():
+        for i in range(1, 6):
+            file = load_cost_file(f"{model}/0{i}_cost.json")
+            stats = calculate_stats(file, model)
+            file_stats[model][i] = stats
+        total_stats = calculate_total_stats(file_stats[model], model)
+        print_stats(total_stats, name=model)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -128,6 +143,8 @@ if __name__ == '__main__':
     parser.add_argument("--detailed", action="store_true", help="Print detailed statistics (prompt/completion tokens, cost)")
     parser.add_argument('--model', default="gpt-5", choices=pricing.keys(), help='Model to estimate cost for')
     args = parser.parse_args()
+    custom()
+    exit(0)
     files = args.file.split(",")
     file_stats = {}
     for file in files:

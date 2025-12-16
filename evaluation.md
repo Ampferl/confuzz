@@ -1,8 +1,9 @@
 # Empirical Evaluation
-```shell
-python3 ../scripts/eval.py -c baseline/06,qwen3_8b/01,deepseek-r1_8b/01,gpt-5/01 --plot
-```
-![plot_best.png](assets/plots/plot_best.png)
+
+![vulnerability_coverage_heatmap.png](assets/plots/vulnerability_coverage_heatmap.png)
+![comparative_effectiveness.png](assets/plots/comparative_effectiveness.png)
+![efficiency_vs_effectiveness.png](assets/plots/efficiency_vs_effectiveness.png)
+- All GPT models are worse slower than 
 
 ## Models
 

@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Ampferl"
+  given-names: "Jonas"
+title: "Design and Evaluation of an LLM-driven Fuzzer for Consumer-Side API Security Testing"
+version: 1.0.0
+date-released: 2026-02-02
+url: "github.com/Ampferl/confuzz"
