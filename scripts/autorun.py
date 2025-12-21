@@ -17,10 +17,10 @@ MODEL_CONFIGS = [
     #{"strategy": "llm", "model": "deepseek-r1:8b", "requests": 1000},
     #{"strategy": "llm", "model": "gpt-5", "requests": 1000},
     #{"strategy": "llm", "model": "gpt-5-nano", "requests": 1000},
+    #{"strategy": "llm", "model": "gpt-5-mini", "requests": 1000},
+    #{"strategy": "llm", "model": "deepseek-r1:1.5b", "requests": 1000},
 
     # ToDo
-    {"strategy": "llm", "model": "gpt-5-mini", "requests": 1000},
-    {"strategy": "llm", "model": "deepseek-r1:1.5b", "requests": 1000},
 ]
 
 BASE_EVAL_DIR = "../evaluation"

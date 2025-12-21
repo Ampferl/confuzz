@@ -2,6 +2,7 @@
 __pycache__
 eval/
 *.db
-*.log
+fuzzer/*.log
+test-environment/consumer/*.log
 .venv
 example_report
