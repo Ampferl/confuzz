@@ -489,6 +489,7 @@ def plot_comparison_v2(agg):
         if not found_in_this_run and req_count > 0:
             stats[m]['success'].append(0)
             stats[m]['reqs'].append(req_count)
+        print(f"{m}: {stats[m]['times']}")
 
     fig, ax = plt.subplots(figsize=(14, 8))
 
@@ -509,6 +510,7 @@ def plot_comparison_v2(agg):
         avg_reqs = np.mean(data['reqs']) if data['reqs'] else 0
 
         is_timeout = success_rate == 0.0
+        # TODO HERE
         avg_time = np.mean(data['times']) if not is_timeout and data['times'] else VISUAL_CAP
 
         if "baseline" in m:
@@ -533,7 +535,7 @@ def plot_comparison_v2(agg):
             width = bar.get_width()
 
             if is_timeout:
-                label_text = f"TIMEOUT\n({int(avg_reqs)} reqs)"
+                label_text = f"TIMEOUT\n{avg_time:.2f}s"
                 text_color = 'red'
             else:
                 label_text = f"{avg_time:.2f}s\n({int(avg_reqs)} reqs)"
@@ -558,6 +560,148 @@ def plot_comparison_v2(agg):
 
     plt.tight_layout()
     plt.show()
+
+
+def plot_comparison_log_scale(agg):
+    selected_models = [
+        "baseline",
+        "gpt-5-nano", "gpt-5-mini", "gpt-5",
+        "qwen3:0.6b", "qwen3:1.7b", "qwen3:8b",
+        "deepseek-r1:1.5b", "deepseek-r1:8b"
+    ]
+
+    target_scenario = "1"
+    d = agg.raw_data
+    stats = defaultdict(lambda: {'times': [], 'reqs': [], 'success': []})
+
+    for run_id, data in d.items():
+        if "/" in run_id:
+            m = run_id.split("/")[0]
+        else:
+            parts = run_id.split("_")
+            m = "_".join(parts[:-1]) if len(parts) > 1 else run_id
+
+        if m not in selected_models:
+            continue
+
+        requests = data['logParser'].matched_requests
+        if not requests: continue
+
+        requests.sort(key=lambda x: x['fuzzer']['_dt'])
+
+        scenario_start_time = None
+        for req in requests:
+            s_id = str(req['consumer'].get("scenario"))
+            if s_id == target_scenario:
+                current_ts = req['fuzzer']['_dt']
+                if scenario_start_time is None or current_ts < scenario_start_time:
+                    scenario_start_time = current_ts
+
+        if not scenario_start_time: continue
+
+        req_count = 0
+        found_in_this_run = False
+        last_req_time = None
+
+        for req in requests:
+            s_id = str(req['consumer'].get("scenario"))
+            if s_id == target_scenario:
+                req_count += 1
+                last_req_time = req['fuzzer']['_dt']
+
+                if req['fuzzer'].get("feedback") and any(
+                        fb.get("exploited") is True for fb in req['fuzzer']["feedback"]):
+                    exploit_time = req['fuzzer']['_dt']
+                    latency_seconds = float(
+                        datetime.fromtimestamp(req['fuzzer']["feedback"][0]["latency"]["total"]).strftime('%S.%f'))
+
+                    duration = (exploit_time - scenario_start_time).total_seconds()
+                    total_time = duration + latency_seconds
+
+                    stats[m]['times'].append(total_time)
+                    stats[m]['reqs'].append(req_count)
+                    stats[m]['success'].append(1)
+                    found_in_this_run = True
+                    break
+
+        if not found_in_this_run and req_count > 0:
+            stats[m]['success'].append(0)
+            stats[m]['reqs'].append(req_count)
+
+            if last_req_time:
+                wasted_time = (last_req_time - scenario_start_time).total_seconds()
+                stats[m]['times'].append(wasted_time)
+
+    fig, ax = plt.subplots(figsize=(14, 8))
+
+    y_pos = np.arange(len(selected_models))
+    bar_height = 0.6
+
+    global_max_time = 0
+
+    for i, m in enumerate(selected_models):
+        data = stats[m]
+        if not data['reqs']: continue
+
+        success_rate = np.mean(data['success'])
+        avg_reqs = np.mean(data['reqs'])
+
+        avg_time = np.mean(data['times']) if data['times'] else 0
+        global_max_time = max(global_max_time, avg_time)
+
+        is_timeout = success_rate == 0.0
+
+        # Colors
+        if "baseline" in m:
+            color = '#ff9999'
+        elif "qwen" in m:
+            color = '#87cefa'
+        elif "deepseek" in m:
+            color = '#90ee90'
+        elif "gpt" in m:
+            color = '#dda0dd'
+        else:
+            color = 'lightgray'
+
+        hatch = '//' if is_timeout else ''
+        edge = 'red' if is_timeout else 'black'
+        bar_color = 'lightgray' if is_timeout else color
+
+        bars = ax.barh(i, avg_time, height=bar_height, color=bar_color,
+                       edgecolor=edge, hatch=hatch, alpha=0.9)
+
+        for bar in bars:
+            width = bar.get_width()
+
+            if is_timeout:
+                label_text = f"TIMEOUT\n{avg_time:.1f}s\n({int(avg_reqs)} reqs)"
+                text_color = 'red'
+            else:
+                label_text = f"{avg_time:.2f}s\n({int(avg_reqs)} reqs)"
+                text_color = 'black'
+
+            ax.text(width+10, bar.get_y() + bar.get_height() / 2,
+                    label_text,
+                    ha='left', va='center', fontsize=10, fontweight='bold', color=text_color)
+
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(selected_models, fontsize=11, fontweight='bold')
+    ax.invert_yaxis()
+
+    ax.set_xlabel("Time to Discovery (Seconds)", fontsize=12)
+
+
+    ax.set_xlim(0.1, global_max_time*1.1)
+
+    timeout_patch = Patch(facecolor='lightgray', edgecolor='red', hatch='//', label='Timeout (1000 reqs)')
+    found_patch = Patch(facecolor='white', edgecolor='black', label='Discovery')
+    ax.legend(handles=[found_patch, timeout_patch], loc='lower right', title='Outcome')
+
+    ax.grid(True, axis='x', linestyle='--', alpha=0.3, which='both')
+
+    plt.tight_layout()
+    plt.show()
+
 
 def plot_comparison(agg):
     selected_models = ["baseline", "qwen3:8b"]
@@ -855,7 +999,7 @@ def main():
         case 'scatter':
             plot_scatter(d)
         case 'comparison-v2':
-            plot_comparison_v2(d)
+            plot_comparison_log_scale(d)
 
     match args.latex:
         case 'efficiency':
