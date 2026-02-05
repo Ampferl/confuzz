@@ -357,19 +357,19 @@ def plot_vulnerability_coverage(agg):
 
     ax.set_xticks(np.arange(len(scenarios)))
     ax.set_yticks(np.arange(len(models)))
-    ax.set_xticklabels([f"Scenario {s}" for s in scenarios])
-    ax.set_yticklabels(models)
+    ax.set_xticklabels([f"Scenario {s}" for s in scenarios], fontsize=14)
+    ax.set_yticklabels(models, fontsize=14)
 
-    ax.set_xlabel("Scenario")
-    ax.set_ylabel("Strategy")
+    ax.set_xlabel("Scenario", fontsize=14)
+    ax.set_ylabel("Strategy", fontsize=14)
 
     cbar = ax.figure.colorbar(im, ax=ax)
-    cbar.ax.set_ylabel("Average Detection Rate (0.0 to 1.0)", rotation=-90, va="bottom")
+    cbar.ax.set_ylabel("Average Detection Rate (0.0 to 1.0)", rotation=-90, va="bottom", fontsize=14)
 
     for i in range(len(models)):
         for j in range(len(scenarios)):
             val = grid_data[i, j]
-            ax.text(j, i, f"{val:.1%}", ha="center", va="center", color="black", fontweight='bold')
+            ax.text(j, i, f"{val:.1%}", ha="center", va="center", color="black", fontsize=14)
 
     plt.tight_layout()
     plt.show()
@@ -674,7 +674,8 @@ def plot_comparison_log_scale(agg):
             width = bar.get_width()
 
             if is_timeout:
-                label_text = f"TIMEOUT\n{avg_time:.1f}s\n({int(avg_reqs)} reqs)"
+                # label_text = f"{avg_time:.1f}s\n({int(avg_reqs)} reqs)"
+                label_text = f"{avg_time:.1f}s\n({int(avg_reqs)} reqs)"
                 text_color = 'red'
             else:
                 label_text = f"{avg_time:.2f}s\n({int(avg_reqs)} reqs)"
@@ -682,20 +683,20 @@ def plot_comparison_log_scale(agg):
 
             ax.text(width+10, bar.get_y() + bar.get_height() / 2,
                     label_text,
-                    ha='left', va='center', fontsize=10, fontweight='bold', color=text_color)
+                    ha='left', va='center', fontsize=14, color=text_color)
 
     ax.set_yticks(y_pos)
-    ax.set_yticklabels(selected_models, fontsize=11, fontweight='bold')
+    ax.set_yticklabels(selected_models, fontsize=14)
     ax.invert_yaxis()
 
-    ax.set_xlabel("Time to Discovery (Seconds)", fontsize=12)
+    ax.set_xlabel("Time to Discovery (Seconds)", fontsize=14)
 
 
-    ax.set_xlim(0.1, global_max_time*1.1)
+    ax.set_xlim(0.1, global_max_time*1.15)
 
-    timeout_patch = Patch(facecolor='lightgray', edgecolor='red', hatch='//', label='Timeout (1000 reqs)')
+    timeout_patch = Patch(facecolor='lightgray', edgecolor='red', hatch='//', label='Request Limit reached (1000 reqs)')
     found_patch = Patch(facecolor='white', edgecolor='black', label='Discovery')
-    ax.legend(handles=[found_patch, timeout_patch], loc='lower right', title='Outcome')
+    ax.legend(handles=[found_patch, timeout_patch], loc='lower right', title='Outcome', fontsize=14)
 
     ax.grid(True, axis='x', linestyle='--', alpha=0.3, which='both')
 
@@ -956,13 +957,13 @@ def plot_scatter(agg):
 
     ax.scatter(avg_latencies, avg_recalls, s=100, c='blue', alpha=0.6, edgecolors='black')
 
-    offsets = [(5, 5),(5, 5),(-13, -15),(-20, -15),(5, 5),(5, 5),(5, 5),(-50, -15)]
+    offsets = [(5, 5),(5, 5),(-20, -20),(-34, -20),(5, 5),(5, 5),(5, 5),(-63, -20)]
     for i, txt in enumerate(models):
         dx, dy = offsets[i % len(offsets)]
-        ax.annotate(txt, (avg_latencies[i], avg_recalls[i]), xytext=(dx, dy), textcoords='offset points')
+        ax.annotate(txt, (avg_latencies[i], avg_recalls[i]), xytext=(dx, dy), fontsize=13, textcoords='offset points')
 
-    ax.set_xlabel('Average Latency per Request (seconds)')
-    ax.set_ylabel('Average Detection Rate (Recall)')
+    ax.set_xlabel('Average Latency per Request (seconds)', fontsize=13)
+    ax.set_ylabel('Average Detection Rate (Recall)', fontsize=13)
 
     ax.grid(True, linestyle='--', alpha=0.5)
 
